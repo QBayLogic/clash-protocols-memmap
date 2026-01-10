@@ -11,14 +11,14 @@ use heck::{ToPascalCase, ToShoutySnakeCase, ToSnakeCase};
 use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{ToTokens, quote};
 
-use memorymap_compiler_base::{
+use memorymap_compiler::{
     backends::all_instance_names,
     input_language::{RegisterAccess, TypeName},
     ir::{
         deduplicate::HalShared,
         monomorph::{MonomorphVariants, TypeRefVariant},
         types::{
-            DeviceDescription, IrCtx, RegisterDescription, TreeElem, TypeDefinition,
+            DeviceDescription, IrCtx, RegisterDescription, TreeElem, TreeElemType, TypeDefinition,
             TypeDescription, TypeRef,
         },
     },
@@ -124,7 +124,7 @@ pub fn generate_device_instances(
 
     let (imports, fields) = tree_elems
         .filter_map(|handle| match ctx.tree_elem_types[handle.cast()] {
-            memorymap_compiler_base::ir::types::TreeElemType::DeviceInstance { device_name } => {
+            TreeElemType::DeviceInstance { device_name } => {
                 let elem = &ctx.tree_elems[handle];
                 let addr = elem.absolute_addr;
                 if ctx.tags[elem.tags].iter().any(|tag| tag == "no-generate") {
@@ -132,7 +132,7 @@ pub fn generate_device_instances(
                 }
                 Some((handle, device_name, addr))
             }
-            memorymap_compiler_base::ir::types::TreeElemType::Interconnect { .. } => None,
+            TreeElemType::Interconnect { .. } => None,
         })
         .map(move |(handle, dev_name, abs_addr)| {
             let name = &ctx.identifiers[dev_name];

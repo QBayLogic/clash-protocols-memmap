@@ -9,7 +9,7 @@ use crate::{
     IdentType, TypeReferences, VariableBindingContext, bv_of_size_1, generate_variable_binding,
     ident, lookup_sub,
 };
-use memorymap_compiler_base::{
+use memorymap_compiler::{
     input_language::RegisterAccess,
     ir::{
         monomorph::{MonomorphVariants, TypeRefVariant},

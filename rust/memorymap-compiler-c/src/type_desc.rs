@@ -7,9 +7,9 @@ use std::fmt::Write;
 
 use crate::{IdentType, TypeReferences, VariableBindingContext, ident, mono_variant_name};
 use crate::{generate_variable_binding, tuple_name};
-use memorymap_compiler_base::ir::types::{TypeConstructor, TypeRef};
-use memorymap_compiler_base::storage::HandleRange;
-use memorymap_compiler_base::{
+use memorymap_compiler::ir::types::{TypeConstructor, TypeRef};
+use memorymap_compiler::storage::HandleRange;
+use memorymap_compiler::{
     input_language::TypeName,
     ir::{
         monomorph::{MonomorphVariants, TypeRefVariant},

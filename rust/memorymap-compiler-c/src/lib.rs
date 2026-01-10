@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 use heck::{ToPascalCase, ToShoutySnakeCase, ToSnakeCase};
 use std::fmt::Write;
 
-use memorymap_compiler_base::{
+use memorymap_compiler::{
     input_language::TypeName,
     ir::{
         monomorph::{MonomorphVariants, TypeRefVariant},

@@ -6,9 +6,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 
 use crate::{IdentType, ident};
-use memorymap_compiler_base::backends::all_instance_names;
-use memorymap_compiler_base::ir::types::TreeElemType;
-use memorymap_compiler_base::{
+use memorymap_compiler::backends::all_instance_names;
+use memorymap_compiler::ir::types::TreeElemType;
+use memorymap_compiler::{
     ir::{
         deduplicate::HalShared,
         types::{IrCtx, TreeElem},

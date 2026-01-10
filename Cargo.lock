@@ -32,7 +32,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 
 [[package]]
-name = "memorymap-compiler-base"
+name = "memorymap-compiler"
 version = "0.1.0"
 dependencies = [
  "derivative",
@@ -49,7 +49,7 @@ name = "memorymap-compiler-c"
 version = "0.1.0"
 dependencies = [
  "heck",
- "memorymap-compiler-base",
+ "memorymap-compiler",
  "proc-macro2",
  "quote",
 ]
@@ -59,7 +59,7 @@ name = "memorymap-compiler-rust"
 version = "0.1.0"
 dependencies = [
  "heck",
- "memorymap-compiler-base",
+ "memorymap-compiler",
  "proc-macro2",
  "quote",
 ]
