@@ -16,6 +16,18 @@ You could keep a list of addresses of different hardware components and offsets 
 
 **Ooooor** you could use  `clash-protocols-memmap`!
 
+```haskell
+someCircuit' ::
+  (HasCallStack, HiddenClockResetEnable dom) =>
+  Circuit
+    (ToConstBwd Mm, Wishbone dom 'Standard 32 (BitVector 32))
+    ()
+someCircuit' = withName "top" $ circuit $ \(mm, master) -> do
+  [a, b] <- interconnectImplicit -< (mm, master)
+  withName "A" magicUart -< a
+  withName "B" magicUart -< b
+```
+
 With [`clash-protocols`][protocols] you can build your circuits using a predefined shape. `clash-protocols-memmap` adds memory map information on a simulation-only backwards channel to each circuit! These memory maps for all those circuits can compose.
 
 Your Clash source code then becomes the source of truth, no need to manually update other documents!
