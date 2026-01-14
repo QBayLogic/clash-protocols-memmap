@@ -75,7 +75,7 @@ deviceWb ::
   String ->
   Circuit
     ( ToConstBwd Mm
-    , Wishbone dom 'Standard aw (Bytes wordSize)
+    , Wishbone dom 'Standard aw wordSize
     )
     ( Vec n (RegisterWb dom aw wordSize)
     )
