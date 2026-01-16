@@ -36,7 +36,6 @@ module Protocols.MemoryMap.Registers.WishboneStandard (
 import Clash.Explicit.Prelude
 import Protocols
 
-import Clash.Class.BitPackC (Bytes)
 import Clash.Prelude (HiddenClock, HiddenReset, hasClock, hasReset)
 import GHC.Stack (withFrozenCallStack)
 import GHC.Stack.Types (HasCallStack)

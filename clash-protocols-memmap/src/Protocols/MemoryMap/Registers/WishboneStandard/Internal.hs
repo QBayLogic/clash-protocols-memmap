@@ -14,7 +14,6 @@ import Clash.Class.BitPackC (BitPackC (..), ByteOrder, Bytes)
 import Clash.Class.BitPackC.Padding (SizeInWordsC, maybeUnpackWordC, packWordC)
 import Clash.Sized.Internal.BitVector (BitVector (unsafeToNatural))
 import Data.Coerce (coerce)
-import Data.Constraint (Dict (Dict))
 import Data.Data (Proxy (Proxy))
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe, isJust)
@@ -41,20 +40,10 @@ import Protocols.Wishbone (
   WishboneS2M (..),
   emptyWishboneS2M,
  )
-import Unsafe.Coerce (unsafeCoerce)
 
 import qualified Data.List as L
 import qualified Data.Map as Map
 import qualified Data.String.Interpolate as I
-
-{- | Postulates that adding a constant less than the denominator does not
-change the result (for the given specific context).
--}
-divWithRemainder ::
-  forall a b c.
-  (1 <= b, c <= (b - 1)) =>
-  Dict (Div ((a * b) + c) b ~ a)
-divWithRemainder = unsafeCoerce (Dict :: Dict (0 ~ 0))
 
 data BusActivity a = BusRead a | BusWrite a
   deriving (Show, Eq, Functor, Generic, NFDataX)
@@ -228,8 +217,6 @@ deviceWithOffsetsWb ::
     ( Vec n (RegisterWithOffsetWb dom aw wordSize)
     )
 deviceWithOffsetsWb deviceName =
-  case divWithRemainder @wordSize @8 @7 of
-    Dict ->
       Circuit go
  where
   -- This behemoth of a type signature because the inferred type signature is
@@ -383,8 +370,6 @@ registerWbDf clk rst regConfig resetValue =
       case d1 `compareSNat` nWords of
         SNatLE ->
           -- "Normal" register that actually holds data
-          case divWithRemainder @wordSize @8 @7 of
-            Dict ->
               Circuit go
         SNatGT ->
           -- Zero-width register that only provides bus activity information
