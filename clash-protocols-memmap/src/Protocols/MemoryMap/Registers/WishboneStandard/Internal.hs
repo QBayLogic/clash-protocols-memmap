@@ -176,8 +176,8 @@ data RegisterConfig = RegisterConfig
 {- | Default register configuration. The defaults are chosen in order of safety,
 efficiency, then convenience. For values, see field documentation of 'RegisterConfig'.
 -}
-registerConfig :: String -> RegisterConfig
-registerConfig name =
+registerConfig :: String -> String -> RegisterConfig
+registerConfig name description =
   -- If you add a default value here, pick the default option in this order:
   --
   --   * Safety. All safety options should be on by default, even if it comes at a
@@ -191,7 +191,7 @@ registerConfig name =
   --
   RegisterConfig
     { name
-    , description = ""
+    , description
     , tags = []
     , access = ReadWrite
     , busRead = PreferRegister

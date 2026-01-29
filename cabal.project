@@ -4,6 +4,7 @@
 packages:
   clash-bitpackc/
   clash-protocols-memmap/
+  clash-protocols-memmap-tests/
 
 write-ghc-environment-files: always
 -- index state, to go along with the cabal.project.freeze file. update the index
@@ -52,6 +53,13 @@ source-repository-package
   type: git
   location: https://github.com/cchalmers/circuit-notation.git
   tag: 564769c52aa05b90f81bbc898b7af7087d96613d
+
+source-repository-package
+  type: git
+  location: https://github.com/clash-lang/clash-vexriscv.git
+  tag: 04e5a2cd78d05ca2187f707bf6e007babfec804c
+  subdir:
+    clash-vexriscv
 
 allow-newer:
   clash-protocols:tasty

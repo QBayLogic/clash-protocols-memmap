@@ -45,6 +45,11 @@
             pkgs.ghc
             pkgs.haskell-language-server
 
+            pkgs.sbt
+            pkgs.scala
+            pkgs.jre8
+            pkgs.verilator
+
             rustToolchain
 
             # For Cabal to clone git repos

@@ -114,24 +114,24 @@ deviceExample clk rst = circuit $ \(mm, wb) -> do
   [float, double, u32, readOnly, writeOnly, prio, prioPreferCircuit, delayed, delayedError] <-
     deviceWb "example" -< (mm, wb)
 
-  registerWb_ clk rst (registerConfig "f") initFloat -< (float, Fwd noWrite)
-  registerWb_ clk rst (registerConfig "d") initDouble -< (double, Fwd noWrite)
-  registerWb_ clk rst (registerConfig "u") initU32 -< (u32, Fwd noWrite)
+  registerWb_ clk rst (registerConfig "f" "") initFloat -< (float, Fwd noWrite)
+  registerWb_ clk rst (registerConfig "d" "") initDouble -< (double, Fwd noWrite)
+  registerWb_ clk rst (registerConfig "u" "") initU32 -< (u32, Fwd noWrite)
 
-  registerWb_ clk rst (registerConfig "ro"){access = ReadOnly} initFloat
+  registerWb_ clk rst (registerConfig "ro" ""){access = ReadOnly} initFloat
     -< (readOnly, Fwd noWrite)
-  registerWb_ clk rst (registerConfig "wo"){access = WriteOnly} initFloat
+  registerWb_ clk rst (registerConfig "wo" ""){access = WriteOnly} initFloat
     -< (writeOnly, Fwd noWrite)
 
   (_a0, Fwd prioOut) <-
-    registerWb clk rst (registerConfig "prio") initU32
+    registerWb clk rst (registerConfig "prio" "") initU32
       -< (prio, Fwd (fmap overwrite <$> prioOut))
 
   -- A register called 'prio_prefer_circuit', which is like 'prio' but expects to
   -- immediately read back circuit writes -- in this case resetting to the initial
   -- value.
   (_a1, Fwd prioPreferCircuitOut) <-
-    registerWb clk rst (registerConfig "prio_prefer_circuit"){busRead = PreferCircuit} initU32
+    registerWb clk rst (registerConfig "prio_prefer_circuit" ""){busRead = PreferCircuit} initU32
       -< (prioPreferCircuit, Fwd (fmap overwrite <$> prioPreferCircuitOut))
 
   -- Insert one register called 'delayed'. We want to test the following properties:
@@ -154,7 +154,7 @@ deviceExample clk rst = circuit $ \(mm, wb) -> do
   --   3. If circuit writes get ignored while acknowledging, a bus write would
   --      randomly write odd values to the register.
   (Fwd delayedActual, delayedDf) <-
-    registerWbDf clk rst (registerConfig "delayed") initU32
+    registerWbDf clk rst (registerConfig "delayed" "") initU32
       -< (delayed, delayedWrite)
 
   delayedWrite <-
@@ -162,7 +162,7 @@ deviceExample clk rst = circuit $ \(mm, wb) -> do
       -< delayedDf
 
   let unexpectedDelayedValue = sticky (testBit <$> delayedActual <*> pure 0)
-  registerWb_ clk rst (registerConfig "delayed_error"){access = ReadOnly} False
+  registerWb_ clk rst (registerConfig "delayed_error" ""){access = ReadOnly} False
     -< (delayedError, Fwd (Just <$> unexpectedDelayedValue))
 
   idC
