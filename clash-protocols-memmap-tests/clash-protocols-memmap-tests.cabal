@@ -157,14 +157,20 @@ library
   exposed-modules:
     Protocols.MemoryMap.Test.Cpu
     Protocols.MemoryMap.Test.Interconnect
+    Protocols.MemoryMap.Test.MemoryMaps
+    Protocols.MemoryMap.Test.Utils
     Protocols.MemoryMap.Test.Instances.UartMock
   build-depends:
     base,
+    bytestring,
     containers,
     clash-prelude,
     clash-bitpackc,
     clash-protocols-memmap,
     clash-vexriscv,
+    template-haskell,
+    filepath,
+    directory,
 
   other-modules:
     VexRiscv_TestCpu

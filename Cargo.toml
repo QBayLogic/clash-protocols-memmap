@@ -6,5 +6,8 @@ resolver = "2"
 members = [
     "rust/memorymap-compiler",
     "rust/memorymap-compiler-c",
-    "rust/memorymap-compiler-rust"
+    "rust/memorymap-compiler-rust",
+
+    "rust/integration-tests/bindings-c",
+    "rust/integration-tests/bindings-rust",
 ]

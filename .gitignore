@@ -7,3 +7,5 @@
 dist-newstyle/
 target/
 rust/target/
+
+test_memory_maps/

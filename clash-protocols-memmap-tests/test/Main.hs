@@ -7,15 +7,15 @@ module Main (main) where
 
 import Clash.Prelude
 
-import Protocols.MemoryMap (getMMAny, MemoryMap)
+import Protocols.MemoryMap (MemoryMap)
 
-import Protocols.MemoryMap.Test.Instances.UartMock as UartMock
+import qualified Protocols.MemoryMap.Test.Instances.UartMock as UartMock
 import Control.Monad (forM_)
 
 memoryMapGeneration :: [MemoryMap]
 memoryMapGeneration =
   [
-      getMMAny (withClockResetEnable clockGen resetGen enableGen $ UartMock.someCircuit @System)
+      UartMock.mm
   ]
 
 main :: IO ()

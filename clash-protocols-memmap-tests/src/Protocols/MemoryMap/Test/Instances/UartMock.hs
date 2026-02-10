@@ -9,7 +9,7 @@ import Clash.Prelude
 
 import GHC.Stack (HasCallStack)
 import Protocols (Circuit, ToConstBwd, toSignals)
-import Protocols.MemoryMap (Mm, withName, withPrefix)
+import Protocols.MemoryMap (Mm, withName, withPrefix, MemoryMap, getMMAny)
 import Protocols.Wishbone (Wishbone, WishboneMode(..), WishboneS2M, WishboneM2S)
 import Protocols.MemoryMap.Registers.WishboneStandard (deviceWb, registerConfig, registerWbI_)
 import Clash.Class.BitPackC (ByteOrder (BigEndian, LittleEndian))
@@ -24,6 +24,8 @@ topEntity clk input = output
   fn = toSignals (withClockResetEnable clk resetGen enableGen someCircuit)
   ((_mm, output), ()) = fn (((), input), ())
 
+mm :: MemoryMap
+mm = getMMAny $ withClockResetEnable @System clockGen resetGen enableGen someCircuit
 
 someCircuit ::
   forall dom.
