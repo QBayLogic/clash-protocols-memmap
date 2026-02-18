@@ -55,10 +55,8 @@ interconnect ::
     )
     ( Vec
         n
-        ( ToConstBwd (BitVector (CLog 2 n))
-        , ( ToConstBwd Mm
-          , Wishbone dom 'Standard (addrWidth - CLog 2 n) nBytes
-          )
+        ( ToConstBwd Mm
+        , Wishbone dom 'Standard (addrWidth - CLog 2 n) nBytes
         )
     )
 interconnect = Circuit go
@@ -67,14 +65,14 @@ interconnect = Circuit go
 
   go ::
     ( ((), Signal dom (WishboneM2S addrWidth nBytes))
-    , Vec n (BitVector (CLog 2 n), (SimOnly MemoryMap, Signal dom (WishboneS2M nBytes)))
+    , Vec n (SimOnly MemoryMap, Signal dom (WishboneS2M nBytes))
     ) ->
     ( (SimOnly MemoryMap, Signal dom (WishboneS2M nBytes))
     , Vec
         n
-        ((), ((), Signal dom (WishboneM2S (addrWidth - CLog 2 n) nBytes)))
+        ((), Signal dom (WishboneM2S (addrWidth - CLog 2 n) nBytes))
     )
-  go (((), m2s), unzip -> (prefs, unzip -> (mms, s2ms))) = ((SimOnly memoryMap, s2m), m2ss)
+  go (((), m2s), unzip -> (mms, s2ms)) = ((SimOnly memoryMap, s2m), m2ss)
    where
     memoryMap =
       MemoryMap
@@ -84,9 +82,10 @@ interconnect = Circuit go
     descs = zip relAddrs ((.tree) . unSim <$> mms)
     relAddrs = prefixToAddr <$> prefs
     unSim (SimOnly x) = x
+    prefs = iterateI (+1) 0
 
     (unbundle -> (s2m, m2ss0)) = inner prefs <$> m2s <*> bundle s2ms
-    m2ss = (\x -> ((), ((), x))) <$> unbundle m2ss0
+    m2ss = ((),) <$> unbundle m2ss0
 
     prefixToAddr :: BitVector (CLog 2 n) -> Address
     prefixToAddr prefix = toInteger prefix `shiftL` fromInteger shift'

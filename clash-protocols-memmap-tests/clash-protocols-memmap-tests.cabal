@@ -155,10 +155,10 @@ library
   import: ghc2024, clash, extra, sane-records
   hs-source-dirs: src
   exposed-modules:
-    Protocols.MemoryMap.Test.Cpu
     Protocols.MemoryMap.Test.Interconnect
     Protocols.MemoryMap.Test.MemoryMaps
     Protocols.MemoryMap.Test.Utils
+    Protocols.MemoryMap.Test.Instances.InterconnectTypeTests
     Protocols.MemoryMap.Test.Instances.UartMock
   build-depends:
     base,
@@ -168,6 +168,7 @@ library
     clash-bitpackc,
     clash-protocols-memmap,
     clash-vexriscv,
+    clash-vexriscv-sim-utils,
     template-haskell,
     filepath,
     directory,
@@ -199,6 +200,7 @@ test-suite clash-protocols-memmap-tests
     build-depends:
       base ^>=4.19.2.0,
       clash-prelude,
+      clash-bitpackc,
       clash-vexriscv,
       clash-protocols-memmap-tests,
       clash-protocols-memmap,

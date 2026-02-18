@@ -9,7 +9,7 @@ import Clash.Prelude
 
 import GHC.Stack (HasCallStack)
 import Protocols (Circuit, ToConstBwd, toSignals)
-import Protocols.MemoryMap (Mm, withName, withPrefix, MemoryMap, getMMAny)
+import Protocols.MemoryMap (Mm, withName, MemoryMap, getMMAny)
 import Protocols.Wishbone (Wishbone, WishboneMode(..), WishboneS2M, WishboneM2S)
 import Protocols.MemoryMap.Registers.WishboneStandard (deviceWb, registerConfig, registerWbI_)
 import Clash.Class.BitPackC (ByteOrder (BigEndian, LittleEndian))
@@ -33,8 +33,8 @@ someCircuit ::
   Circuit (ToConstBwd Mm, Wishbone dom 'Standard 32 4) ()
 someCircuit = circuit $ \(mm, master) -> do
   [a, b] <- interconnect -< (mm, master)
-  withPrefix 0b01 (withName "A" magicUart) -< a
-  withPrefix 0b00 (withName "B" magicUart) -< b
+  withName "A" magicUart -< a
+  withName "B" magicUart -< b
 
 magicUart ::
   (HasCallStack, HiddenClockResetEnable dom, KnownNat addrWidth) =>
