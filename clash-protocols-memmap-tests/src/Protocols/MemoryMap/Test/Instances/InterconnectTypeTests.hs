@@ -5,15 +5,19 @@
 {-# OPTIONS_GHC -fplugin Protocols.Plugin #-}
 module Protocols.MemoryMap.Test.Instances.InterconnectTypeTests where
 
-import Clash.Prelude
+import Clash.Prelude hiding (read)
 
 import GHC.Stack (HasCallStack)
 import Protocols (Circuit, ToConstBwd)
-import Protocols.MemoryMap (Mm, withName, getMMAny, MemoryMap)
+import Protocols.MemoryMap (Mm, withName, getMMAny, MemoryMap, unMemmap)
 import Protocols.Wishbone (Wishbone, WishboneMode(..))
 import Protocols.MemoryMap.Registers.WishboneStandard (deviceWb, registerConfig, registerWbI_)
 import Clash.Class.BitPackC (ByteOrder)
 import Protocols.MemoryMap.Test.Interconnect (interconnect)
+
+import Protocols.MemoryMap.Test.Hedgehog.WbTransaction
+import Text.Printf (printf)
+import Data.Functor.Identity (Identity(runIdentity))
 
 mm ::
   (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
@@ -72,3 +76,48 @@ registerPrimitivesTest = circuit $ \(mm, wb) -> do
   registerWbI_ (registerConfig "tup_bool_unit" "") (False, ()) -< (tup_bool_unit, Fwd noWrite)
   where
     noWrite = pure Nothing
+
+
+boolTest ::
+  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  Transaction TestDone
+boolTest = do
+  res0 <- read 0x00
+  assert (res0 == False) "intial value should be False"
+  write 0x00 True
+  res1 <- read 0x00
+  assert (res1 == True) "updated value should be True"
+  testSucceeded
+
+bv8Test ::
+  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  Transaction TestDone
+bv8Test = do
+  res0 :: BitVector 8 <- read 0x08
+  assert (res0 == 0) "intial value should be 0"
+  write 0x08 (42 :: BitVector 8)
+  res1 :: BitVector 8 <- read 0x08
+  assert (res1 == 42) "updated value should be 42"
+  testSucceeded
+
+bv34Test ::
+  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  Transaction TestDone
+bv34Test = do
+  res0 :: BitVector 34 <- read 0x0C
+  assert (res0 == 0) "intial value should be 0"
+  write 0x0C (0xABCD :: BitVector 34)
+  res1 :: BitVector 34 <- read 0x0C
+  assert (res1 == 0xABCD) $ printf "updated value should be 0xABCD but is %X" (toInteger res1)
+  testSucceeded
+
+runInterconnectTypeTests :: (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => [(String, TransactionResult)]
+runInterconnectTypeTests = runIdentity $ runWbTest circuit1 testList
+ where
+  testList =
+    [ ("Bool", boolTest)
+    , ("bv8", bv8Test)
+    , ("bv34", bv34Test)
+    ]
+  circuit0 = withClockResetEnable @System clockGen resetGen enableGen interconnectTypeTests
+  circuit1 = unMemmap circuit0

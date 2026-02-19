@@ -155,12 +155,16 @@ library
   import: ghc2024, clash, extra, sane-records
   hs-source-dirs: src
   exposed-modules:
+    Protocols.MemoryMap.Test.Hedgehog.MemoryMap
+    Protocols.MemoryMap.Test.Hedgehog.WbTransaction
     Protocols.MemoryMap.Test.Interconnect
     Protocols.MemoryMap.Test.MemoryMaps
     Protocols.MemoryMap.Test.Utils
     Protocols.MemoryMap.Test.Instances.InterconnectTypeTests
     Protocols.MemoryMap.Test.Instances.UartMock
+
   build-depends:
+    arrows,
     base,
     bytestring,
     containers,
@@ -170,8 +174,14 @@ library
     clash-vexriscv,
     clash-vexriscv-sim-utils,
     template-haskell,
+    hedgehog >=1.0 && <1.5,
+    tasty >=1.5 && <1.7,
+    tasty-hedgehog >=1.2 && <1.5,
+    tasty-hunit,
+    tasty-th,
     filepath,
     directory,
+    operational,
 
   other-modules:
     VexRiscv_TestCpu

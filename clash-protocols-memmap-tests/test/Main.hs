@@ -16,6 +16,8 @@ import Clash.Class.BitPackC (ByteOrder (..))
 
 import qualified Protocols.MemoryMap.Test.Instances.UartMock as UartMock
 import qualified Protocols.MemoryMap.Test.Instances.InterconnectTypeTests as ITT
+import Protocols.MemoryMap.Test.Instances.InterconnectTypeTests (runInterconnectTypeTests)
+import Text.Printf (printf)
 
 withBO :: ByteOrder -> ByteOrder -> ((?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => a) -> a
 withBO reg bus val =
@@ -34,3 +36,13 @@ main :: IO ()
 main = do
   forM_ memoryMapGeneration $ \mm -> do
     print mm
+
+  let resultsLB = withBO LittleEndian BigEndian runInterconnectTypeTests
+  putStrLn $ "Running Interconnect tests for Little/Big"
+  forM_ resultsLB $ \(name, res) -> do
+    printf "Test %s resulted in: %s\n" name (show res)
+
+  let resultsBL = withBO BigEndian LittleEndian runInterconnectTypeTests
+  putStrLn $ "Running Interconnect tests for Big/Little"
+  forM_ resultsBL $ \(name, res) -> do
+    printf "Test %s resulted in: %s\n" name (show res)
