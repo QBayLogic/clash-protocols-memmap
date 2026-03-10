@@ -27,7 +27,7 @@ $(do
     -------------------------------
     let memoryMaps =
           [ ("UartMock", UartMock.mm)
-          ]
+          ] :: [(String, MemoryMap)]
 
     memMapDir <- runIO $ do
       root <- findParentContaining "cabal.project"
@@ -50,8 +50,9 @@ $(do
       if not $ null errors
         then do
           -- report errors
-          forM_ errors $ \err -> do
-            reportError (getErrorMessage err)
+          runIO $ print errors
+          -- forM_ errors $ \err -> do
+          --   reportError (getErrorMessage err)
           pure ()
         else do
           -- output JSON

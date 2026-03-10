@@ -168,6 +168,7 @@ library
     base,
     bytestring,
     containers,
+    constraints,
     clash-prelude,
     clash-bitpackc,
     clash-protocols-memmap,
@@ -210,6 +211,7 @@ test-suite clash-protocols-memmap-tests
     build-depends:
       base ^>=4.19.2.0,
       clash-prelude,
+      bytestring,
       clash-bitpackc,
       clash-vexriscv,
       clash-protocols-memmap-tests,

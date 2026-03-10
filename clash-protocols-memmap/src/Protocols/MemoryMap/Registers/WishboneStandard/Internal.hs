@@ -14,7 +14,7 @@ import Clash.Class.BitPackC (BitPackC (..), ByteOrder, Bytes)
 import Clash.Class.BitPackC.Padding (SizeInWordsC, maybeUnpackWordC, packWordC)
 import Clash.Sized.Internal.BitVector (BitVector (unsafeToNatural))
 import Data.Coerce (coerce)
-import Data.Data (Proxy (Proxy))
+import Data.Data (Proxy (Proxy), Typeable)
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe, isJust)
 import GHC.Stack (HasCallStack, SrcLoc)
@@ -82,6 +82,7 @@ type RegisterWbConstraints (a :: Type) (dom :: Domain) (wordSize :: Nat) (aw :: 
   ( HasCallStack
   , WithTypeDescription a
   , BitPackC a
+  , Typeable a
   , NFDataX a
   , KnownDomain dom
   , KnownNat wordSize
@@ -121,6 +122,7 @@ zeroWidthRegisterMeta ::
   forall a aw.
   ( KnownNat aw
   , WithTypeDescription a
+  , Typeable a
   , BitPackC a
   , NFDataX a
   ) =>

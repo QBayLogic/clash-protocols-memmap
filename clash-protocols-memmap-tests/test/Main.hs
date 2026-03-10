@@ -4,20 +4,26 @@
 
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NumericUnderscores #-}
 module Main (main) where
 
 import Clash.Prelude
 
 import Control.Monad (forM_)
 
-import Protocols.MemoryMap (MemoryMap)
+import Protocols.MemoryMap
+import Protocols.MemoryMap.Check.AbsAddress
 import Clash.Class.BitPackC (ByteOrder (..))
+
+import qualified Data.ByteString.Lazy as BS
 
 import qualified Protocols.MemoryMap.Test.Instances.UartMock as UartMock
 import qualified Protocols.MemoryMap.Test.Instances.InterconnectTypeTests as ITT
 import Protocols.MemoryMap.Test.Instances.InterconnectTypeTests (runInterconnectTypeTests)
 import Text.Printf (printf)
+import Protocols.MemoryMap.Json (encode, memoryMapJson, LocationStorage (LocationSeparate))
 
 withBO :: ByteOrder -> ByteOrder -> ((?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => a) -> a
 withBO reg bus val =
@@ -35,14 +41,21 @@ memoryMapGeneration =
 main :: IO ()
 main = do
   forM_ memoryMapGeneration $ \mm -> do
-    print mm
+    let relTree = convert mm.tree
+    let normTree = normalizeRelTree relTree
+    let (absTree, _) = runMakeAbsolute mm.deviceDefs (0x0000_0000, 0xFFFF_FFFF) normTree
 
-  let resultsLB = withBO LittleEndian BigEndian runInterconnectTypeTests
+    let json = memoryMapJson LocationSeparate mm.deviceDefs absTree
+    let content = encode json
+    BS.putStr content
+    putStrLn ""
+
+  resultsLB <- withBO LittleEndian BigEndian runInterconnectTypeTests
   putStrLn $ "Running Interconnect tests for Little/Big"
   forM_ resultsLB $ \(name, res) -> do
     printf "Test %s resulted in: %s\n" name (show res)
 
-  let resultsBL = withBO BigEndian LittleEndian runInterconnectTypeTests
+  resultsBL <- withBO BigEndian LittleEndian runInterconnectTypeTests
   putStrLn $ "Running Interconnect tests for Big/Little"
   forM_ resultsBL $ \(name, res) -> do
     printf "Test %s resulted in: %s\n" name (show res)

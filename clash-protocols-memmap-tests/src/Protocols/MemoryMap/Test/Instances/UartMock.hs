@@ -17,7 +17,7 @@ import Protocols.MemoryMap.Test.Interconnect (interconnect)
 
 topEntity ::
   Clock System ->
-  Signal System (WishboneM2S 32 4) ->
+  Signal System (WishboneM2S 30 4) ->
   Signal System (WishboneS2M 4)
 topEntity clk input = output
  where
@@ -30,7 +30,7 @@ mm = getMMAny $ withClockResetEnable @System clockGen resetGen enableGen someCir
 someCircuit ::
   forall dom.
   (HasCallStack, HiddenClockResetEnable dom, HasCallStack) =>
-  Circuit (ToConstBwd Mm, Wishbone dom 'Standard 32 4) ()
+  Circuit (ToConstBwd Mm, Wishbone dom 'Standard 30 4) ()
 someCircuit = circuit $ \(mm, master) -> do
   [a, b] <- interconnect -< (mm, master)
   withName "A" magicUart -< a

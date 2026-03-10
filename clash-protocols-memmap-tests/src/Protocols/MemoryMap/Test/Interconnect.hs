@@ -88,9 +88,10 @@ interconnect = Circuit go
     m2ss = ((),) <$> unbundle m2ss0
 
     prefixToAddr :: BitVector (CLog 2 n) -> Address
-    prefixToAddr prefix = toInteger prefix `shiftL` fromInteger shift'
+    prefixToAddr prefix = natToNum @nBytes * (toInteger prefix `shiftL` fromInteger shift')
      where
       shift' = snatToInteger $ SNat @(addrWidth - CLog 2 n)
+
 
   inner ::
     Vec n (BitVector (CLog 2 n)) ->

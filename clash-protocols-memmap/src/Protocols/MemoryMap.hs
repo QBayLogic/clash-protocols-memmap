@@ -84,7 +84,7 @@ import Clash.Prelude (
 import Protocols
 
 import Clash.Class.BitPackC
-import Data.Data (Proxy (Proxy))
+import Data.Data (Proxy (Proxy), Typeable)
 import GHC.Stack (HasCallStack, SrcLoc, callStack, getCallStack)
 import Protocols.MemoryMap.Check.Normalized
 import Protocols.MemoryMap.TypeDescription (TypeRef, WithTypeDescription (asTypeRef))
@@ -161,7 +161,7 @@ data Access
 See 'regType' and 'regTypeSplit' to construct values of this type.
 -}
 data RegisterType where
-  RegisterType :: (WithTypeDescription a, BitPackC a) => Proxy a -> RegisterType
+  RegisterType :: (WithTypeDescription a, BitPackC a, Typeable a) => Proxy a -> RegisterType
 
 regFieldType :: RegisterType -> TypeRef
 regFieldType (RegisterType proxy) = inner proxy
@@ -175,7 +175,7 @@ regByteSizeC (RegisterType proxy) = inner proxy
   inner :: forall x a. (BitPackC x, Num a) => Proxy x -> a
   inner Proxy = natToNum @(ByteSizeC x)
 
-regType :: forall a. (WithTypeDescription a, BitPackC a) => RegisterType
+regType :: forall a. (WithTypeDescription a, BitPackC a, Typeable a) => RegisterType
 regType = RegisterType (Proxy @a)
 
 instance Show RegisterType where

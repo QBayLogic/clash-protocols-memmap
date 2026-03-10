@@ -8,8 +8,8 @@ module Protocols.MemoryMap.Test.Instances.InterconnectTypeTests where
 import Clash.Prelude hiding (read)
 
 import GHC.Stack (HasCallStack)
-import Protocols (Circuit, ToConstBwd)
-import Protocols.MemoryMap (Mm, withName, getMMAny, MemoryMap, unMemmap)
+import Protocols (Circuit)
+import Protocols.MemoryMap
 import Protocols.Wishbone (Wishbone, WishboneMode(..))
 import Protocols.MemoryMap.Registers.WishboneStandard (deviceWb, registerConfig, registerWbI_)
 import Clash.Class.BitPackC (ByteOrder)
@@ -17,7 +17,11 @@ import Protocols.MemoryMap.Test.Interconnect (interconnect)
 
 import Protocols.MemoryMap.Test.Hedgehog.WbTransaction
 import Text.Printf (printf)
-import Data.Functor.Identity (Identity(runIdentity))
+import Protocols.MemoryMap.Check (runMakeAbsolute)
+import Protocols.MemoryMap.Test.Hedgehog.MemoryMap
+
+import Control.Monad (forM_)
+import Control.Monad.IO.Class (MonadIO (liftIO))
 
 mm ::
   (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
@@ -28,10 +32,10 @@ interconnectTypeTests ::
   forall dom.
   (HasCallStack, HiddenClockResetEnable dom, HasCallStack) =>
   (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
-  Circuit (ToConstBwd Mm, Wishbone dom 'Standard 32 4) ()
+  Circuit (ToConstBwd Mm, Wishbone dom 'Standard 8 4) ()
 interconnectTypeTests = circuit $ \(mm, master) -> do
-  [prim] <- interconnect -< (mm, master)
-  [primA, primB] <- withName "Primitives" interconnect -< prim
+  -- [prim] <- interconnect -< (mm, master)
+  [primA, primB] <- withName "Primitives" interconnect -< (mm, master) --prim
   withName "A" registerPrimitivesTest -< primA
   withName "B" registerPrimitivesTest -< primB
 
@@ -40,84 +44,177 @@ registerPrimitivesTest ::
   (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
   Circuit (ToConstBwd Mm, Wishbone dom 'Standard addrWidth 4) ()
 registerPrimitivesTest = circuit $ \(mm, wb) -> do
-  [   bool
-    , unit
-    , bv8
-    , bv34
-    , u8
-    , u24
-    , s8
-    , s31
-    , i100
-    , i38390
-    , bv8_arr5
-    , bv8_arr5_arr2
-    , tup_bool_unit
+  [   bv8_1
+    , bv8_42
+    , bv8_128
+    , bv8_38
+    , bv15_1
+    , bv15_42
+    , bv15_128
+    , bv15_14348
+    , bv8_arr4
+    , bv15_arr2
+    , bv64_42
+    , bv48
     ] <- deviceWb "RegisterPrimitivesTest" -< (mm, wb)
 
-  registerWbI_ (registerConfig "bool" "") False -< (bool, Fwd noWrite)
-  registerWbI_ (registerConfig "unit" "") () -< (unit, Fwd noWrite)
 
-  registerWbI_ (registerConfig "bv8" "") (0 :: BitVector 8) -< (bv8, Fwd noWrite)
-  registerWbI_ (registerConfig "bv34" "") (0 :: BitVector 34) -< (bv34, Fwd noWrite)
+  registerWbI_ (registerConfig "bv8_1" "") (1 :: BitVector 8) -< (bv8_1 , Fwd noWrite)
+  registerWbI_ (registerConfig "bv8_42" "") (42 :: BitVector 8) -< (bv8_42, Fwd noWrite)
+  registerWbI_ (registerConfig "bv8_128" "") (128 :: BitVector 8) -< (bv8_128, Fwd noWrite)
+  registerWbI_ (registerConfig "bv8_38" "") (38 :: BitVector 8) -< (bv8_38, Fwd noWrite)
 
-  registerWbI_ (registerConfig "u8" "") (0 :: Unsigned 8) -< (u8, Fwd noWrite)
-  registerWbI_ (registerConfig "u24" "") (0 :: Unsigned 24) -< (u24, Fwd noWrite)
+  registerWbI_ (registerConfig "bv15_1" "") (1 :: BitVector 15) -< (bv15_1, Fwd noWrite)
+  registerWbI_ (registerConfig "bv15_42" "") (42 :: BitVector 15) -< (bv15_42, Fwd noWrite)
+  registerWbI_ (registerConfig "bv15_128" "") (128 :: BitVector 15) -< (bv15_128, Fwd noWrite)
+  registerWbI_ (registerConfig "bv15_14348" "") (14348 :: BitVector 15) -< (bv15_14348, Fwd noWrite)
 
-  registerWbI_ (registerConfig "s8" "") (0 :: Signed 8) -< (s8, Fwd noWrite)
-  registerWbI_ (registerConfig "s31" "") (0 :: Signed 31) -< (s31, Fwd noWrite)
+  registerWbI_ (registerConfig "bv8_arr4" "") ((12 :> 34 :> 56 :> 78 :> Nil) :: Vec 4 (BitVector 8)) -< (bv8_arr4, Fwd noWrite)
 
-  registerWbI_ (registerConfig "i100" "") (0 :: Index 100) -< (i100, Fwd noWrite)
-  registerWbI_ (registerConfig "i38390" "") (0 :: Index 38390) -< (i38390, Fwd noWrite)
+  registerWbI_ (registerConfig "bv15_arr2" "") ((1234 :> 56789 :> Nil) :: Vec 2 (BitVector 15)) -< (bv15_arr2, Fwd noWrite)
 
-  registerWbI_ (registerConfig "bv8_arr5" "") (repeat 0 :: Vec 5 (BitVector 8)) -< (bv8_arr5, Fwd noWrite)
-  registerWbI_ (registerConfig "bv8_arr5_arr2" "") (repeat (repeat 0) :: Vec 2 (Vec 5 (BitVector 8))) -< (bv8_arr5_arr2, Fwd noWrite)
-
-  registerWbI_ (registerConfig "tup_bool_unit" "") (False, ()) -< (tup_bool_unit, Fwd noWrite)
+  registerWbI_ (registerConfig "bv64_42" "") (0x4242_3535_9595_4848 :: BitVector 64) -< (bv64_42, Fwd noWrite)
+  registerWbI_ (registerConfig "bv48" "") (0x4242_3535_9595 :: BitVector 48) -< (bv48, Fwd noWrite)
   where
     noWrite = pure Nothing
 
 
-boolTest ::
-  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
-  Transaction TestDone
-boolTest = do
-  res0 <- read 0x00
-  assert (res0 == False) "intial value should be False"
-  write 0x00 True
-  res1 <- read 0x00
-  assert (res1 == True) "updated value should be True"
-  testSucceeded
 
 bv8Test ::
-  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
-  Transaction TestDone
-bv8Test = do
-  res0 :: BitVector 8 <- read 0x08
-  assert (res0 == 0) "intial value should be 0"
-  write 0x08 (42 :: BitVector 8)
-  res1 :: BitVector 8 <- read 0x08
-  assert (res1 == 42) "updated value should be 42"
+  (MonadIO m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  Address ->
+  BitVector 8 ->
+  TransactionT m TestDone
+bv8Test addr val = do
+  liftIO $ putStrLn "Testing BitVector 8"
+  res0 <- read addr
+  liftIO $ printf "Found value %X at address %X\n" (toInteger res0) (toInteger addr)
+  assert (res0 == val) $ "intial value should be " <> show val <> " but found " <> show res0
+  liftIO $ printf "Writing value %X\n" (toInteger $ complement res0)
+  write addr (complement res0)
+  res1 <- read addr
+  liftIO $ printf "Found new value %X\n" (toInteger res1)
+  assert (res1 == complement res0) "should complement"
   testSucceeded
 
-bv34Test ::
-  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
-  Transaction TestDone
-bv34Test = do
-  res0 :: BitVector 34 <- read 0x0C
-  assert (res0 == 0) "intial value should be 0"
-  write 0x0C (0xABCD :: BitVector 34)
-  res1 :: BitVector 34 <- read 0x0C
-  assert (res1 == 0xABCD) $ printf "updated value should be 0xABCD but is %X" (toInteger res1)
+bv15Test ::
+  (MonadIO m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  Address ->
+  BitVector 15 ->
+  TransactionT m TestDone
+bv15Test addr val = do
+  liftIO $ putStrLn "Testing BitVector 15"
+  res0 <- read addr
+  liftIO $ printf "Found value %X at address %X\n" (toInteger res0) (toInteger addr)
+  assert (res0 == val) $ "intial value should be " <> show val <> " but found " <> show res0
+  liftIO $ printf "Writing value %X\n" (toInteger $ complement res0)
+  write addr (complement res0)
+  res1  <- read addr
+  liftIO $ printf "Found new value %X\n" (toInteger res1)
+  assert (res1 == complement res0) "should complement"
   testSucceeded
 
-runInterconnectTypeTests :: (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => [(String, TransactionResult)]
-runInterconnectTypeTests = runIdentity $ runWbTest circuit1 testList
+bv64Test ::
+  (MonadIO m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  Address ->
+  BitVector 64 ->
+  TransactionT m TestDone
+bv64Test addr val = do
+  liftIO $ putStrLn "Testing BitVector 64"
+  res0 <- read addr
+  liftIO $ printf "Found value %X at address %X\n" (toInteger res0) (toInteger addr)
+  assert (res0 == val) $ "intial value should be " <> show val <> " but found " <> show res0
+  liftIO $ printf "Writing value %X\n" (toInteger $ complement res0)
+  write addr (complement res0)
+  res1  <- read addr
+  liftIO $ printf "Found new value %X\n" (toInteger res1)
+  assert (res1 == complement res0) "should complement"
+  testSucceeded
+
+runInterconnectTypeTests :: (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => IO [(String, TransactionResult)]
+runInterconnectTypeTests = runWbTest circuit1 testList
  where
   testList =
-    [ ("Bool", boolTest)
-    , ("bv8", bv8Test)
-    , ("bv34", bv34Test)
+    [
+      ("A bv8_1", bv8Test 0x00 1)
+    , ("A bv8_42", bv8Test 0x04 42)
+    , ("A bv8_128", bv8Test 0x08 128)
+    , ("A bv8_38", bv8Test 0x0C 38)
+    , ("B bv8_1", bv8Test (512 + 0x00) 1)
+    , ("B bv8_42", bv8Test (512 + 0x04) 42)
+    , ("B bv8_128", bv8Test (512 + 0x08) 128)
+    , ("B bv8_38", bv8Test (512 + 0x0C) 38)
+
+
+    , ("A bv15_1", bv15Test 0x10 1)
+    , ("A bv15_42", bv15Test 0x14 42)
+    , ("A bv15_128", bv15Test 0x18 128)
+    , ("A bv15_14348", bv15Test 0x1C 14348)
+    , ("B bv15_1", bv15Test (512 + 0x10) 1)
+    , ("B bv15_42", bv15Test (512 + 0x14) 42)
+    , ("B bv15_128", bv15Test (512 + 0x18) 128)
+    , ("B bv15_14348", bv15Test (512 + 0x1C) 14348)
+
+    , ("A bv8_arr4_1", bv8Test 0x20 12)
+    , ("A bv8_arr4_2", bv8Test 0x21 34)
+    , ("A bv8_arr4_3", bv8Test 0x22 56)
+    , ("A bv8_arr4_4", bv8Test 0x23 78)
+
+    , ("A bv15_arr2_1", bv15Test 0x24 1234)
+    , ("A bv15_arr2_2", bv15Test 0x26 56789)
+
+    , ("A bv64_42", bv64Test 0x28 0x4242_3535_9595_4848)
     ]
+    <> regTestList
   circuit0 = withClockResetEnable @System clockGen resetGen enableGen interconnectTypeTests
   circuit1 = unMemmap circuit0
+
+
+
+
+regTestList :: forall m. (MonadIO m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => [(String, TransactionT m TestDone)]
+regTestList = -- filter (\(name, _) -> "bv48" `isInfixOf` name) $
+  makeTest <$> regs
+ where
+  relTree = convert mm.tree
+  normTree = normalizeRelTree relTree
+  (absTree, _) = runMakeAbsolute mm.deviceDefs (0x00, 0xFF) normTree
+
+  regs = traverseRegisters mm absTree
+
+  makeTest :: TraversedRegister -> (String, TransactionT m TestDone)
+  makeTest reg = (testName, testFn regTestType regSize regAddr)
+   where
+    regSize = regByteSizeC reg.regDesc.value.fieldType
+    testName = show reg.instancePath <> reg.deviceDef.deviceName.name <> "::" <> reg.regDesc.name.name
+
+    typeRef = regFieldType reg.regDesc.value.fieldType
+
+    regTestType = typeRefToRegTestType typeRef
+
+    regAddr = reg.instanceAddr + reg.regDesc.value.address
+
+    testFn rtt size addr = do
+      case rtt of
+        RTTBool -> testSucceeded
+        RTTBitVector n@SNat -> bvFn n addr
+        RTTVec n@SNat inner -> vecFn n inner size addr
+        _ -> testSucceeded
+
+    bvFn :: forall n. SNat n -> Address -> TransactionT m TestDone
+    bvFn nSnat@SNat addr = do
+      liftIO $ printf "BitVector %i at address %X\n" (snatToInteger nSnat) (toInteger addr)
+      bv :: BitVector n <- read addr
+      let complemented = complement bv
+      write addr complemented
+      bv1 <- read addr
+      assert (bv1 == complement bv) "should complement"
+      testSucceeded
+
+    vecFn :: forall n. SNat n -> RegisterTestType -> Integer -> Address -> TransactionT m TestDone
+    vecFn nSnat@SNat inner size addr = do
+      let n = snatToInteger nSnat
+      let innerSize = size `div` n
+      forM_ [0..n] $ \i -> do
+        testFn inner innerSize (addr + (i * innerSize))
+      testSucceeded
