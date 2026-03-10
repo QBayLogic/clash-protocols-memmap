@@ -50,6 +50,8 @@ jobs:
             - run: nix develop --command cabal run clash-protocols-memmap:example
             - run: nix develop --command cabal run clash-protocols-memmap:hdl-test
 
+            - run: nix develop --command cabal run clash-protocols-memmap-tests
+
     rust-nix:
         name: Build and test Rust (Nix flake)
         runs-on: ubuntu-24.04
