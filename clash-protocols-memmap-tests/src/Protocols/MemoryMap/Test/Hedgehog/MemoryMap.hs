@@ -1,10 +1,11 @@
 -- SPDX-FileCopyrightText: 2025 Google LLC
 --
 -- SPDX-License-Identifier: Apache-2.0
+
+-- | Tools to help build tests for memory maps
 module Protocols.MemoryMap.Test.Hedgehog.MemoryMap where
 
 import Clash.Explicit.Prelude
-
 
 import qualified Data.List as L
 import qualified Data.Map.Strict as Map
@@ -18,7 +19,10 @@ import Protocols.MemoryMap.Check.AbsAddress (MemoryMapTreeAbsNorm, AbsNormData (
 import Protocols.MemoryMap.TypeDescription.TH
 import qualified Language.Haskell.TH as TH
 
-
+-- | One instance of a register in a memory map
+--
+-- If one device type has multiple instances in a memory map,
+-- each register will be emitted for each instance.
 data TraversedRegister = TraversedRegister
   { regDesc :: NamedLoc Register
   , instancePath :: Path
@@ -26,6 +30,7 @@ data TraversedRegister = TraversedRegister
   , deviceDef :: DeviceDefinition
   }
 
+-- | Traverse a memory map and output a list of all registers present
 traverseRegisters :: MemoryMap -> MemoryMapTreeAbsNorm -> [TraversedRegister]
 traverseRegisters mm = traverseTree mm.deviceDefs
  where
@@ -37,7 +42,8 @@ traverseRegisters mm = traverseTree mm.deviceDefs
   findRegs AbsNormData{path, absoluteAddr} devDef = flip fmap devDef.registers $ \reg ->
     TraversedRegister { regDesc = reg, instancePath = path, instanceAddr = absoluteAddr, deviceDef = devDef }
 
-
+-- | Representation of a type of a register that allows more flexible
+-- tests by allowing access to compile time variable
 data RegisterTestType where
   RTTBool :: RegisterTestType
   RTTFloat :: RegisterTestType
@@ -50,6 +56,7 @@ data RegisterTestType where
   RTTTuple :: [RegisterTestType] -> RegisterTestType
   RTTOther :: TypeRef -> RegisterTestType
 
+-- | Compute the 'RegisterTestType' of a 'TypeRef'
 typeRefToRegTestType :: TypeRef -> RegisterTestType
 typeRefToRegTestType (TupleType _ args) = RTTTuple $ typeRefToRegTestType <$> args
 typeRefToRegTestType (Variable _) = error ""
