@@ -213,10 +213,10 @@ moreRealUart ::
   -- , 1 <= nBytes
   ) =>
   -- | Recommended value: 16. This seems to be a good balance between resource
-  -- usage and usability.
+  --   usage and usability.
   SNat transmitBufferDepth ->
   -- | Recommended value: 16. This seems to be a good balance between resource
-  -- usage and usability.
+  --   usage and usability.
   SNat receiveBufferDepth ->
   Circuit
     (Wishbone dom 'Standard addrW nBytes, CSignal dom Bit)

@@ -27,7 +27,7 @@ getErrorMessage err =
       , location
       } ->
         printf
-          "Component %s at address %X with size %X exceeds the available size %X (%s)"
+          "Component %s at address %08X with size %08X exceeds the available size %08X (%s)"
           (show path)
           startAddr
           requestedSize
@@ -40,7 +40,7 @@ getErrorMessage err =
       , location
       } ->
         printf
-          "Component %s has been given an absolute address %X which is different from the computed one %X (%s)"
+          "Component %s has been given an absolute address %08X which is different from the computed one %08X (%s)"
           (show path)
           expected
           actual

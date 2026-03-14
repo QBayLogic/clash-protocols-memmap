@@ -19,7 +19,6 @@ import Data.List (sortOn)
 import GHC.Stack (SrcLoc)
 
 import qualified Data.Map.Strict as Map
-import Debug.Trace (traceShowId)
 
 type AddressRange = (Address, Address)
 
@@ -54,7 +53,7 @@ runMakeAbsolute ::
   AddressRange ->
   MemoryMapTreeRelNorm ->
   (MemoryMapTreeAbsNorm, [AddressError])
-runMakeAbsolute ctx range tree = runWriter (makeAbsolute ctx range $ traceShowId tree)
+runMakeAbsolute ctx range tree = runWriter (makeAbsolute ctx range tree)
 
 makeAbsolute ::
   DeviceDefinitions ->
@@ -88,7 +87,7 @@ makeAbsolute ctx (start, size) (AnnDeviceInstance relData srcLoc deviceName) =
         pure newDevInstance
 makeAbsolute ctx (start, size) (AnnInterconnect relData srcLoc comps0) =
   checkAssertedAddr start relData.absoluteAddr relData.path $ do
-    comps2 <- forM (traceShowId componentList) $ \((start', size'), comp0) -> do
+    comps2 <- forM componentList $ \((start', size'), comp0) -> do
       comp1 <- makeAbsolute ctx (start + start', size') comp0
       pure (start', comp1)
 

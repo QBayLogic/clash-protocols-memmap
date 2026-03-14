@@ -2,9 +2,6 @@
 --
 -- SPDX-License-Identifier: Apache-2.0
 
--- This is needed for the 'divWithRemainder' lemma.
-{-# LANGUAGE AllowAmbiguousTypes #-}
-
 module Protocols.MemoryMap.Registers.WishboneStandard.Internal where
 
 import Clash.Explicit.Prelude
@@ -14,7 +11,7 @@ import Clash.Class.BitPackC (BitPackC (..), ByteOrder, Bytes)
 import Clash.Class.BitPackC.Padding (SizeInWordsC, maybeUnpackWordC, packWordC)
 import Clash.Sized.Internal.BitVector (BitVector (unsafeToNatural))
 import Data.Coerce (coerce)
-import Data.Data (Proxy (Proxy), Typeable)
+import Data.Data (Proxy (Proxy))
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe, isJust)
 import GHC.Stack (HasCallStack, SrcLoc)
@@ -82,7 +79,6 @@ type RegisterWbConstraints (a :: Type) (dom :: Domain) (wordSize :: Nat) (aw :: 
   ( HasCallStack
   , WithTypeDescription a
   , BitPackC a
-  , Typeable a
   , NFDataX a
   , KnownDomain dom
   , KnownNat wordSize
@@ -111,7 +107,7 @@ data RegisterMeta aw = RegisterMeta
   , register :: SimOnly Register
   , nWords :: BitVector (aw + 1)
   -- ^ Number of words occupied by this register. Note that it is (+1) because we need
-  -- to be able to represent registers that occupy the full address space.
+  --   to be able to represent registers that occupy the full address space.
   }
 
 {- | Meta information for a zero-width register. Zero-width registers do not take up
@@ -122,7 +118,6 @@ zeroWidthRegisterMeta ::
   forall a aw.
   ( KnownNat aw
   , WithTypeDescription a
-  , Typeable a
   , BitPackC a
   , NFDataX a
   ) =>
@@ -151,11 +146,11 @@ zeroWidthRegisterMeta Proxy conf =
 -- | What to do when a bus read occurs at the same time as a circuit write.
 data BusReadBehavior
   = -- | When a bus read occurs at the same time as a circuit write, read the
-    -- value still in the register.
+    --     value still in the register.
     PreferRegister
   | -- | When a bus read occurs at the same time as a circuit write, read the
-    -- value being written by the circuit. Selecting this option introduces an
-    -- extra mux and, depending on the type, packing logic.
+    --     value being written by the circuit. Selecting this option introduces an
+    --     extra mux and, depending on the type, packing logic.
     PreferCircuit
   deriving (Show)
 
@@ -168,10 +163,10 @@ data RegisterConfig = RegisterConfig
   -- ^ Tags included for code generation
   , access :: Access
   -- ^ Access rights for this register, also propagated to code generation. Default:
-  -- 'ReadWrite'.
+  --   'ReadWrite'.
   , busRead :: BusReadBehavior
   -- ^ Behavior when a bus read occurs at the same time as a circuit write. Default:
-  -- 'PreferRegister'.
+  --   'PreferRegister'.
   }
   deriving (Show)
 
@@ -216,10 +211,9 @@ deviceWithOffsetsWb ::
     ( ToConstBwd Mm
     , Wishbone dom 'Standard aw wordSize
     )
-    ( Vec n (RegisterWithOffsetWb dom aw wordSize)
-    )
+    (Vec n (RegisterWithOffsetWb dom aw wordSize))
 deviceWithOffsetsWb deviceName =
-      Circuit go
+    Circuit go
  where
   -- This behemoth of a type signature because the inferred type signature is
   -- too general, confusing the type checker.
@@ -372,7 +366,7 @@ registerWbDf clk rst regConfig resetValue =
       case d1 `compareSNat` nWords of
         SNatLE ->
           -- "Normal" register that actually holds data
-              Circuit go
+          Circuit go
         SNatGT ->
           -- Zero-width register that only provides bus activity information
           Circuit $ \(((_, _, m2s0), _), (_, ack)) ->

@@ -76,8 +76,7 @@ deviceWb ::
     ( ToConstBwd Mm
     , Wishbone dom 'Standard aw wordSize
     )
-    ( Vec n (RegisterWb dom aw wordSize)
-    )
+    (Vec n (RegisterWb dom aw wordSize))
 deviceWb deviceName = circuit $ \(mm, wb) -> do
   (offsets0, metas0, wbs) <-
     V.unzip3 <| withFrozenCallStack deviceWithOffsetsWb deviceName -< (mm, wb)
