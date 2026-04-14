@@ -139,7 +139,7 @@ pub fn generate_device_instances(
 
             let instance_name_data = &instance_names.names[&handle];
 
-            let instance_name_ident = if instance_name_data.num_conflicts > 0 {
+            let instance_name_ident = if instance_name_data.num_conflicts > 1 {
                 ident(
                     IdentType::Instance,
                     format!(

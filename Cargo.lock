@@ -5,10 +5,20 @@ version = 4
 [[package]]
 name = "bindings-c"
 version = "0.1.0"
+dependencies = [
+ "memorymap-compiler",
+ "memorymap-compiler-c",
+]
 
 [[package]]
 name = "bindings-rust"
 version = "0.1.0"
+dependencies = [
+ "memorymap-compiler",
+ "memorymap-compiler-rust",
+ "proc-macro2",
+ "quote",
+]
 
 [[package]]
 name = "derivative"
