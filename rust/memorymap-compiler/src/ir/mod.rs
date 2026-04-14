@@ -19,5 +19,6 @@
 
 pub mod deduplicate;
 pub mod input_to_ir;
+pub mod instance_names;
 pub mod monomorph;
 pub mod types;

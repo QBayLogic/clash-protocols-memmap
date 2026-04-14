@@ -12,10 +12,10 @@ use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{ToTokens, quote};
 
 use memorymap_compiler::{
-    backends::all_instance_names,
     input_language::{RegisterAccess, TypeName},
     ir::{
         deduplicate::HalShared,
+        instance_names::InstanceNames,
         monomorph::{MonomorphVariants, TypeRefVariant},
         types::{
             DeviceDescription, IrCtx, RegisterDescription, TreeElem, TreeElemType, TypeDefinition,
@@ -115,12 +115,11 @@ pub fn generate_type_desc<'ir>(
 pub fn generate_device_instances(
     ctx: &IrCtx,
     shared: &HalShared,
+    instance_names: &InstanceNames,
     hal_name: &str,
     tree_elems: impl Iterator<Item = Handle<TreeElem>> + Clone,
 ) -> TokenStream {
     let hal_ident = ident(IdentType::Module, hal_name);
-    let (name_mapping, name_counts) = all_instance_names(ctx, tree_elems.clone());
-    let mut names_used = BTreeMap::new();
 
     let (imports, fields) = tree_elems
         .filter_map(|handle| match ctx.tree_elem_types[handle.cast()] {
@@ -138,19 +137,19 @@ pub fn generate_device_instances(
             let name = &ctx.identifiers[dev_name];
             let dev_ident = ident(IdentType::Device, name);
 
-            let instance_name_ident = {
-                let raw_name = name_mapping[&handle];
-                if name_counts[raw_name] > 1 {
-                    // if there's more than one instance with the same name,
-                    // generate suffixes, `_0`, `_1` etc
-                    let count = names_used
-                        .entry(raw_name)
-                        .and_modify(|n| *n += 1)
-                        .or_insert(0);
-                    ident(IdentType::Instance, format!("{raw_name}_{count}"))
-                } else {
-                    ident(IdentType::Instance, raw_name)
-                }
+            let instance_name_data = &instance_names.names[&handle];
+
+            let instance_name_ident = if instance_name_data.num_conflicts > 0 {
+                ident(
+                    IdentType::Instance,
+                    format!(
+                        "{}_{}",
+                        instance_name_data.name.as_str(ctx),
+                        instance_name_data.conflict_idx
+                    ),
+                )
+            } else {
+                ident(IdentType::Instance, instance_name_data.name.as_str(ctx))
             };
 
             use std::str::FromStr;

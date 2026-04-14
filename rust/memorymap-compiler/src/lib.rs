@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod backends;
 pub mod input_language;
 
 pub mod ir;

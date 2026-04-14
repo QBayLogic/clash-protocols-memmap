@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2025 Google LLC
 //
 // SPDX-License-Identifier: Apache-2.0
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use std::fmt::Write;
 
 use crate::{IdentType, ident};
-use memorymap_compiler::backends::all_instance_names;
+use memorymap_compiler::ir::instance_names::InstanceNames;
 use memorymap_compiler::ir::types::TreeElemType;
 use memorymap_compiler::{
     ir::{
@@ -19,6 +19,7 @@ use memorymap_compiler::{
 pub fn generate_device_instances(
     ctx: &IrCtx,
     shared: &HalShared,
+    instance_names: &InstanceNames,
     hal_name: &str,
     tree_elems: impl Iterator<Item = Handle<TreeElem>> + Clone,
 ) -> String {
@@ -32,9 +33,6 @@ pub fn generate_device_instances(
     writeln!(device_type, "typedef struct DeviceInstances {{").unwrap();
 
     writeln!(device_instance, "static const DeviceInstances hal = {{").unwrap();
-
-    let (name_mapping, name_counts) = all_instance_names(ctx, tree_elems.clone());
-    let mut names_used = BTreeMap::new();
 
     for handle in tree_elems {
         let (name, addr) = match ctx.tree_elem_types[handle.cast()] {
@@ -54,19 +52,19 @@ pub fn generate_device_instances(
         let name = &ctx.identifiers[name];
         let dev_ident = ident(IdentType::Device, name);
 
-        let instance_name = {
-            let raw_name = name_mapping[&handle];
-            if name_counts[raw_name] > 1 {
-                // if there's more than one instance with the same name,
-                // generate suffixes, `_0`, `_1` etc
-                let count = names_used
-                    .entry(raw_name)
-                    .and_modify(|n| *n += 1)
-                    .or_insert(0);
-                ident(IdentType::Instance, format!("{raw_name}_{count}"))
-            } else {
-                ident(IdentType::Instance, raw_name)
-            }
+        let instance_name_data = &instance_names.names[&handle];
+
+        let instance_name = if instance_name_data.num_conflicts > 0 {
+            ident(
+                IdentType::Instance,
+                format!(
+                    "{}_{}",
+                    instance_name_data.name.as_str(ctx),
+                    instance_name_data.conflict_idx
+                ),
+            )
+        } else {
+            ident(IdentType::Instance, instance_name_data.name.as_str(ctx))
         };
 
         let hex_addr = format!("0x{:X}", addr);
