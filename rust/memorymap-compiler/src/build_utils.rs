@@ -23,8 +23,8 @@ fn setup_riscv_linker(out_dir: &str) {
     println!("cargo:rustc-link-search={out_dir}");
 }
 
-/// Get the path to the memory maps directory using git to find the project root.
-pub fn memmap_dir() -> PathBuf {
+/// Get the path to the top-level project directory using git to find the project root.
+pub fn git_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
     // Try to find git root from the manifest directory
@@ -46,7 +46,7 @@ pub fn memmap_dir() -> PathBuf {
         .trim()
         .to_string();
 
-    PathBuf::from(git_root).join("_build").join("memory_maps")
+    PathBuf::from(git_root)
 }
 
 /// Generates a memory.x file from a JSON memory map file and set up the linker
@@ -57,11 +57,12 @@ pub fn memmap_dir() -> PathBuf {
 /// * `data_device_name` - Name of the data memory device (usually "DataMemory")
 /// * `instr_device_name` - Name of the instruction memory device (usually "InstructionMemory")
 pub fn standard_memmap_build(
+    memmap_dir: &Path,
     memmap_json_name: &str,
     data_device_name: &str,
     instr_device_name: &str,
 ) {
-    let memmap_path = memmap_dir().join(memmap_json_name);
+    let memmap_path = memmap_dir.join(memmap_json_name);
     let memory_x = memory_x_from_memmap(&memmap_path, data_device_name, instr_device_name);
 
     let out_dir = env::var("OUT_DIR").expect("No out dir");

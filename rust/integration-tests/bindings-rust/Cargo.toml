@@ -7,3 +7,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+[build-dependencies]
+memorymap-compiler = { path = "../../memorymap-compiler" }
+memorymap-compiler-rust = { path = "../../memorymap-compiler-rust" }
+proc-macro2 = "*"
+quote = "*"

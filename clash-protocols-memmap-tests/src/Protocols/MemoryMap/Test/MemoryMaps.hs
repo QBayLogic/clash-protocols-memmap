@@ -17,9 +17,18 @@ import qualified Protocols.MemoryMap.Json as Json
 import qualified Data.ByteString.Lazy as BS
 
 import qualified Protocols.MemoryMap.Test.Instances.UartMock as UartMock
+import qualified Protocols.MemoryMap.Test.Instances.InterconnectTypeTests as ITT
+import Clash.Class.BitPackC (ByteOrder(LittleEndian, BigEndian))
 
 
 $(do
+    let
+      withBO :: ByteOrder -> ByteOrder -> ((?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => a) -> a
+      withBO reg bus action =
+         let ?regByteOrder = reg
+             ?busByteOrder = bus
+         in action
+
     -------------------------------
     -- MEMORY MAPS               --
     --                           --
@@ -27,6 +36,7 @@ $(do
     -------------------------------
     let memoryMaps =
           [ ("UartMock", UartMock.mm)
+          , ("InterconnectTypeTests", withBO LittleEndian BigEndian ITT.mm)
           ] :: [(String, MemoryMap)]
 
     memMapDir <- runIO $ do
@@ -50,10 +60,8 @@ $(do
       if not $ null errors
         then do
           -- report errors
-          runIO $ print errors
-          -- forM_ errors $ \err -> do
-          --   reportError (getErrorMessage err)
-          pure ()
+          forM_ errors $ \err -> do
+            reportError (getErrorMessage err)
         else do
           -- output JSON
 

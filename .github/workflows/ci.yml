@@ -40,6 +40,8 @@ jobs:
               with:
                   path: |
                       ~/.cabal-nix/store
+                      ~/.cabal/packages
+                      ~/.cabal/store
                   key: packages-cachebust-0-nix-${{ hashFiles('cabal.project.freeze', 'cabal.project', 'flake.nix', 'flake.lock', 'nix/**/*.nix', 'nix/**/*.json') }}
                   restore-keys: packages-cachebust-0-nix
 
@@ -52,9 +54,17 @@ jobs:
 
             - run: nix develop --command cabal run clash-protocols-memmap-tests
 
+            - name: Cache memory map files
+              uses: actions/cache/save@v4
+              with:
+                  path: test_memory_maps
+                  key: ${{ github.sha }}-test-memory-maps
+
     rust-nix:
         name: Build and test Rust (Nix flake)
         runs-on: ubuntu-24.04
+
+        needs: ["haskell-nix"]
 
         steps:
             - name: Checkout
@@ -76,6 +86,12 @@ jobs:
                       ~/.cabal-nix/store
                   key: packages-cachebust-0-nix-${{ hashFiles('cabal.project.freeze', 'cabal.project', 'flake.nix', 'flake.lock', 'nix/**/*.nix', 'nix/**/*.json') }}
                   restore-keys: packages-cachebust-0-nix
+
+            - name: Cache memory map files
+              uses: actions/cache/restore@v4
+              with:
+                  path: test_memory_maps
+                  key: ${{ github.sha }}-test-memory-maps
 
             - run: nix develop --command cargo build
             - run: nix develop --command cargo test
