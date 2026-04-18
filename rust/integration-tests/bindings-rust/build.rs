@@ -17,10 +17,7 @@ use memorymap_compiler::ir::monomorph::passes::OnlyNats;
 use memorymap_compiler::ir::monomorph::{MonomorphVariants, Monomorpher};
 use memorymap_compiler::ir::types::IrCtx;
 
-use memorymap_compiler_rust::{
-    self as backend_rust, IdentType, TypeReferences, generate_device_instances, generate_type_desc,
-    ident,
-};
+use memorymap_compiler_rust::{self as backend_rust, IdentType, ident};
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -103,7 +100,7 @@ fn main() {
 
     // add annotations (derives etc)
     //
-    let mut annotations = backend_rust::Annotations::default();
+    let mut annotations = backend_rust::type_desc::Annotations::default();
     annotate_types(&ctx, &varis, &mut annotations, DebugType::UDebug);
 
     // used to track files for formatting later on
@@ -145,7 +142,8 @@ fn main() {
             if ctx.type_tuples.contains(handle) {
                 continue;
             }
-            let (name, code, refs) = generate_type_desc(&ctx, &varis, &annotations, *handle);
+            let (name, code, refs) =
+                backend_rust::type_desc::generate_type_desc(&ctx, &varis, &annotations, *handle);
             let mod_name = ident(IdentType::Module, type_name(name));
             writeln!(mod_file, "pub mod {mod_name};").unwrap();
             writeln!(mod_file, "pub use {mod_name}::*;").unwrap();
@@ -178,7 +176,8 @@ fn main() {
                 continue;
             }
 
-            let (dev_name, code, refs) = backend_rust::generate_device_desc(&ctx, &varis, *dev);
+            let (dev_name, code, refs) =
+                backend_rust::device_desc::generate_device_desc(&ctx, &varis, *dev);
             let file_name = ident(IdentType::Module, dev_name);
             let file_path = shared_devices_path.join(format!("{}.rs", file_name));
             let mut file = File::create(&file_path).unwrap();
@@ -231,7 +230,8 @@ fn main() {
             {
                 continue;
             }
-            let (dev_name, code, refs) = backend_rust::generate_device_desc(&ctx, &varis, *dev);
+            let (dev_name, code, refs) =
+                backend_rust::device_desc::generate_device_desc(&ctx, &varis, *dev);
             let file_name = ident(IdentType::Module, dev_name);
             let file_path = hal_path.join("devices").join(format!("{}.rs", file_name));
 
@@ -247,7 +247,7 @@ fn main() {
         }
 
         {
-            let code = generate_device_instances(
+            let code = backend_rust::device_instances::generate_device_instances(
                 &ctx,
                 &shared,
                 &instance_names,
@@ -271,7 +271,7 @@ pub enum DebugType {
 fn annotate_types(
     ctx: &IrCtx,
     varis: &MonomorphVariants,
-    annotations: &mut backend_rust::Annotations,
+    annotations: &mut backend_rust::type_desc::Annotations,
     debug_type: DebugType,
 ) {
     let mut has_float = BTreeSet::new();
@@ -363,7 +363,10 @@ fn annotate_types(
     }
 }
 
-fn generate_type_ref_imports(ctx: &IrCtx, refs: &TypeReferences) -> TokenStream {
+fn generate_type_ref_imports(
+    ctx: &IrCtx,
+    refs: &backend_rust::type_reference::TypeReferences,
+) -> TokenStream {
     let mut code = TokenStream::new();
     for ty_ref in &refs.references {
         let name = &ctx.type_names[*ty_ref].base;
