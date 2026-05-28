@@ -9,9 +9,9 @@ import Clash.Prelude hiding (read)
 
 import GHC.Stack (HasCallStack)
 import Protocols (Circuit)
+import Protocols.Experimental.Wishbone (Wishbone, WishboneMode(..))
 import Protocols.MemoryMap
-import Protocols.Wishbone (Wishbone, WishboneMode(..))
-import Protocols.MemoryMap.Registers.WishboneStandard (deviceWb, registerConfig, registerWbI_)
+import Protocols.MemoryMap.Registers.WishboneStandard (deviceWbI, deviceConfig, registerConfig, registerWbI_)
 import Clash.Class.BitPackC (ByteOrder)
 import Protocols.MemoryMap.Test.Interconnect (interconnect)
 
@@ -23,15 +23,13 @@ import Protocols.MemoryMap.Test.Hedgehog.MemoryMap
 import Control.Monad (forM_)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 
-mm ::
-  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
-  MemoryMap
+mm :: (?byteOrder :: ByteOrder) => MemoryMap
 mm = getMMAny $ withClockResetEnable @System clockGen resetGen enableGen interconnectTypeTests
 
 interconnectTypeTests ::
   forall dom.
   (HasCallStack, HiddenClockResetEnable dom, HasCallStack) =>
-  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (?byteOrder :: ByteOrder) =>
   Circuit (ToConstBwd Mm, Wishbone dom 'Standard 8 4) ()
 interconnectTypeTests = circuit $ \(mm, master) -> do
   -- [prim] <- interconnect -< (mm, master)
@@ -41,7 +39,7 @@ interconnectTypeTests = circuit $ \(mm, master) -> do
 
 registerPrimitivesTest ::
   (HasCallStack, HiddenClockResetEnable dom, KnownNat addrWidth) =>
-  (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (?byteOrder :: ByteOrder) =>
   Circuit (ToConstBwd Mm, Wishbone dom 'Standard addrWidth 4) ()
 registerPrimitivesTest = circuit $ \(mm, wb) -> do
   [   bv8_1
@@ -56,7 +54,7 @@ registerPrimitivesTest = circuit $ \(mm, wb) -> do
     , bv15_arr2
     , bv64_42
     , bv48
-    ] <- deviceWb "RegisterPrimitivesTest" -< (mm, wb)
+    ] <- deviceWbI (deviceConfig "RegisterPrimitivesTest") -< (mm, wb)
 
 
   registerWbI_ (registerConfig "bv8_1" "") (1 :: BitVector 8) -< (bv8_1 , Fwd noWrite)
@@ -81,7 +79,7 @@ registerPrimitivesTest = circuit $ \(mm, wb) -> do
 
 
 bv8Test ::
-  (MonadIO m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (MonadIO m, ?byteOrder :: ByteOrder) =>
   Address ->
   BitVector 8 ->
   TransactionT m TestDone
@@ -98,7 +96,7 @@ bv8Test addr val = do
   testSucceeded
 
 bv15Test ::
-  (MonadIO m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (MonadIO m, ?byteOrder :: ByteOrder) =>
   Address ->
   BitVector 15 ->
   TransactionT m TestDone
@@ -115,7 +113,7 @@ bv15Test addr val = do
   testSucceeded
 
 bv64Test ::
-  (MonadIO m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (MonadIO m, ?byteOrder :: ByteOrder) =>
   Address ->
   BitVector 64 ->
   TransactionT m TestDone
@@ -131,7 +129,7 @@ bv64Test addr val = do
   assert (res1 == complement res0) "should complement"
   testSucceeded
 
-runInterconnectTypeTests :: (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => IO [(String, TransactionResult)]
+runInterconnectTypeTests :: (?byteOrder :: ByteOrder) => IO [(String, TransactionResult)]
 runInterconnectTypeTests = runWbTest circuit1 testList
  where
   testList =
@@ -172,7 +170,7 @@ runInterconnectTypeTests = runWbTest circuit1 testList
 
 
 
-regTestList :: forall m. (MonadIO m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => [(String, TransactionT m TestDone)]
+regTestList :: forall m. (MonadIO m, ?byteOrder :: ByteOrder) => [(String, TransactionT m TestDone)]
 regTestList = -- filter (\(name, _) -> "bv48" `isInfixOf` name) $
   makeTest <$> regs
  where

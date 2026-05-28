@@ -47,10 +47,10 @@ jobs:
             - run: nix develop --command cabal run clash-bitpackc:unittests
             - run: nix develop --command cabal run clash-protocols-memmap:unittests
 
-            - run: nix develop --command cabal run clash-protocols-memmap:example
-            - run: nix develop --command cabal run clash-protocols-memmap:hdl-test
+            - run: nix develop --command cabal run clash-protocols-memmap-tests:tests
 
-            - run: nix develop --command cabal run clash-protocols-memmap-tests
+            - run: nix develop --command cabal run clash-protocols-memmap-tests:example
+            - run: nix develop --command cabal run clash-protocols-memmap-tests:hdl-test
 
     rust-nix:
         name: Build and test Rust (Nix flake)

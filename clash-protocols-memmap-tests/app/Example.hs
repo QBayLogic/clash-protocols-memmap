@@ -19,7 +19,7 @@ memory map and then prints out the JSON representation of it.
 
 import Clash.Prelude
 
-import Internal.HdlTest.UartMock (someOtherCircuit)
+import Protocols.MemoryMap.Test.Instances.UartMock (someCircuit)
 
 import Protocols.MemoryMap
 import Protocols.MemoryMap.Check.AbsAddress (runMakeAbsolute)
@@ -31,7 +31,7 @@ import qualified Protocols.MemoryMap.Json as Json
 main :: IO ()
 main = do
   let SimOnly memoryMap =
-        getConstBwdAny (withClockResetEnable @System clockGen resetGen enableGen someOtherCircuit)
+        getConstBwdAny (withClockResetEnable @System clockGen resetGen enableGen someCircuit)
   print memoryMap
   let tree0 = convert memoryMap.tree
   let tree1 = normalizeRelTree tree0

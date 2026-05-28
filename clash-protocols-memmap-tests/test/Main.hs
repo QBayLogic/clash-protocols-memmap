@@ -25,17 +25,16 @@ import Protocols.MemoryMap.Test.Instances.InterconnectTypeTests (runInterconnect
 import Text.Printf (printf)
 import Protocols.MemoryMap.Json (encode, memoryMapJson, LocationStorage (LocationSeparate))
 
-withBO :: ByteOrder -> ByteOrder -> ((?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => a) -> a
-withBO reg bus val =
+withBO :: ByteOrder -> ((?byteOrder :: ByteOrder) => a) -> a
+withBO bo val =
   let
-    ?regByteOrder = reg
-    ?busByteOrder = bus
+    ?byteOrder = bo
   in val
 
 memoryMapGeneration :: [MemoryMap]
 memoryMapGeneration =
   [ UartMock.mm
-  , withBO LittleEndian BigEndian ITT.mm
+  , withBO LittleEndian ITT.mm
   ]
 
 main :: IO ()
@@ -50,12 +49,12 @@ main = do
     BS.putStr content
     putStrLn ""
 
-  resultsLB <- withBO LittleEndian BigEndian runInterconnectTypeTests
-  putStrLn $ "Running Interconnect tests for Little/Big"
+  resultsLB <- withBO LittleEndian runInterconnectTypeTests
+  putStrLn $ "Running Interconnect tests for Little"
   forM_ resultsLB $ \(name, res) -> do
     printf "Test %s resulted in: %s\n" name (show res)
 
-  resultsBL <- withBO BigEndian LittleEndian runInterconnectTypeTests
-  putStrLn $ "Running Interconnect tests for Big/Little"
+  resultsBL <- withBO BigEndian runInterconnectTypeTests
+  putStrLn $ "Running Interconnect tests for Big"
   forM_ resultsBL $ \(name, res) -> do
     printf "Test %s resulted in: %s\n" name (show res)

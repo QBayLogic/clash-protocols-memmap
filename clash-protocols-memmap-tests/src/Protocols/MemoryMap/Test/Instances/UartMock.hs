@@ -9,9 +9,9 @@ import Clash.Prelude
 
 import GHC.Stack (HasCallStack)
 import Protocols (Circuit, ToConstBwd, toSignals)
+import Protocols.Experimental.Wishbone (Wishbone, WishboneMode(..), WishboneS2M, WishboneM2S)
 import Protocols.MemoryMap (Mm, withName, MemoryMap, getMMAny)
-import Protocols.Wishbone (Wishbone, WishboneMode(..), WishboneS2M, WishboneM2S)
-import Protocols.MemoryMap.Registers.WishboneStandard (deviceWb, registerConfig, registerWbI_)
+import Protocols.MemoryMap.Registers.WishboneStandard (deviceWbI, deviceConfig, registerConfig, registerWbI_)
 import Clash.Class.BitPackC (ByteOrder (BigEndian, LittleEndian))
 import Protocols.MemoryMap.Test.Interconnect (interconnect)
 
@@ -41,9 +41,8 @@ magicUart ::
   Circuit (ToConstBwd Mm, Wishbone dom 'Standard addrWidth 4) ()
 magicUart =
   let
-    ?regByteOrder = LittleEndian
-    ?busByteOrder = BigEndian
+    ?byteOrder = LittleEndian
   in
   circuit $ \(mm, wb) -> do
-    [dataWb] <- deviceWb "Uart" -< (mm, wb)
+    [dataWb] <- deviceWbI (deviceConfig "Uart") -< (mm, wb)
     registerWbI_ (registerConfig "data" "") (0 :: BitVector 8) -< (dataWb, Fwd (pure Nothing))

@@ -496,8 +496,19 @@ pub fn parse(src: &str) -> Result<MemoryMapDesc, serde_json::Error> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
 
     use super::*;
+
+    fn memmap_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("test_memory_maps")
+            .into()
+    }
 
     #[test]
     fn register_access() {
@@ -507,21 +518,9 @@ mod tests {
     }
 
     /*
-    use std::path::PathBuf;
-    fn memmap_dir() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("_build")
-            .join("memory_maps")
-            .into()
-    }
-
     #[test]
     fn test_deserialise_memmap() {
-        let path = memmap_dir().join("VexRiscv.json");
+        let path = memmap_dir().join("UartMock.json");
 
         let source = std::fs::read_to_string(&path).unwrap();
         let _memmap: MemoryMapDesc = serde_json::from_str(&source).unwrap();

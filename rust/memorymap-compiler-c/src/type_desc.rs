@@ -5,8 +5,8 @@
 use std::collections::BTreeSet;
 use std::fmt::Write;
 
-use crate::{IdentType, TypeReferences, VariableBindingContext, ident, mono_variant_name};
 use crate::{generate_variable_binding, tuple_name};
+use crate::{ident, mono_variant_name, IdentType, TypeReferences, VariableBindingContext};
 use memorymap_compiler::ir::types::{TypeConstructor, TypeRef};
 use memorymap_compiler::storage::HandleRange;
 use memorymap_compiler::{

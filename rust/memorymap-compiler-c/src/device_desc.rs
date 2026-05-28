@@ -6,8 +6,8 @@ use std::collections::BTreeSet;
 use std::fmt::Write;
 
 use crate::{
-    IdentType, TypeReferences, VariableBindingContext, bv_of_size_1, generate_variable_binding,
-    ident, lookup_sub,
+    bv_of_size_1, generate_variable_binding, ident, lookup_sub, IdentType, TypeReferences,
+    VariableBindingContext,
 };
 use memorymap_compiler::{
     input_language::RegisterAccess,
