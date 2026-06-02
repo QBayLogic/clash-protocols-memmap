@@ -26,16 +26,17 @@ import Clash.Class.BitPackC
 import Control.Monad.Operational
 
 import Data.Constraint (Dict (..))
+import Debug.Trace
 
 import Protocols (Circuit (..), toSignals)
+import Protocols.Experimental.Wishbone
 import Protocols.MemoryMap (
   Address,
  )
-import Protocols.Wishbone
 
 import Control.Arrow.Transformer.Automaton (Automaton(Automaton))
 import Text.Printf (printf)
-import Clash.Class.BitPackC.Padding (packWordC, maybeUnpackWordC)
+import Clash.Class.BitPackC.Words (packWordC, maybeUnpackWordC)
 import Control.Monad (forM_, forM)
 import Data.Functor.Identity (Identity)
 import Unsafe.Coerce (unsafeCoerce)
@@ -90,7 +91,7 @@ assert False msg = testFailed $ printf "Assertion failed: %s" msg
 --   - have a size larger than a word and the value is expected to start at the word boundary
 read ::
   forall a m.
-  (BitPack a, BitPackC a, Monad m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (BitPack a, BitPackC a, Monad m, ?byteOrder :: ByteOrder) =>
   Address ->
   TransactionT m a
 read addr = do
@@ -110,7 +111,7 @@ read addr = do
 --   - have a size larger than a word and the value is expected to start at the word boundary
 write ::
   forall a m.
-  (BitPackC a, Monad m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (BitPackC a, Monad m, ?byteOrder :: ByteOrder) =>
   Address ->
   a ->
   TransactionT m ()
@@ -245,7 +246,7 @@ writeRaw addr sel val = do
 
 {-| Words spit out are in ?regByteOrder -}
 readNWordsFromAligned ::
-  forall n m. (Monad m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  forall n m. (Monad m) =>
   SNat n ->
   Address ->
   TransactionT m (Vec n (BitVector 32))
@@ -254,19 +255,18 @@ readNWordsFromAligned SNat addr = do
   let wordAlignedAddr = addr `div` 4
   forM wordIndices $ \i -> do
     let currentWordAddr = wordAlignedAddr + i
-    word0 <- readRaw currentWordAddr 0b1111
-    pure $ shuffle word0
+    readRaw currentWordAddr 0b1111
 
 readAligned ::
   forall a m.
-  (BitPack a, BitPackC a, Monad m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (BitPack a, BitPackC a, Monad m, ?byteOrder :: ByteOrder) =>
   Address ->
   TransactionT m a
 readAligned addr = do
   -- output is in regByteOrder
   words0 <- readNWordsFromAligned SNat addr
 
-  let x = maybeUnpackWordC ?regByteOrder words0
+  let x = maybeUnpackWordC ?byteOrder words0
   case x of
     Nothing -> testFailed $ printf "Error when trying to unpack value from memory at %X" addr
     Just val -> do
@@ -274,7 +274,7 @@ readAligned addr = do
 
 readLessThanWord ::
   forall a m.
-  (BitPackC a, Monad m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (BitPackC a, Monad m, ?byteOrder :: ByteOrder) =>
   (ByteSizeC a <= 4) =>
   Address ->
   TransactionT m a
@@ -283,35 +283,35 @@ readLessThanWord addr = do
   let subWordAddr = addr `mod` 4
   let wordAlignedAddr = addr `div` 4 -- subWordAddr
   word0 <- readRaw wordAlignedAddr 0b1111
+  traceM $ printf "raw word: %08X" (toInteger word0)
   let word1 = extractDataFromWord word0 size subWordAddr
   case cancelMulDiv @(ByteSizeC a) @4 of
-    Dict -> case maybeUnpackWordC ?regByteOrder (word1 :> Nil) of
+    Dict -> case maybeUnpackWordC ?byteOrder (word1 :> Nil) of
      Nothing -> testFailed $ printf "Error when trying to unpack value from memory at %X" addr
      Just val -> do
        pure val
 
 writeAligned ::
   forall a m.
-  (BitPackC a, Monad m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (BitPackC a, Monad m, ?byteOrder :: ByteOrder) =>
   Address ->
   a ->
   TransactionT m ()
 writeAligned addr val = do
   let wordAlignedAddr = addr `div` 4
   let bytes = natToInteger @(ByteSizeC a)
-  let x = packWordC @4 ?regByteOrder val
+  let x = packWordC @4 ?byteOrder val
   forM_ (iterateI (+ 1) 0 `zip` x) $ \(i, word0) -> do
-    let word1 = shuffle word0
     let bytesSoFar = i * 4
     let bytesLeft = bytes - bytesSoFar
     let bytesInWord = bytesLeft `min` 4
     let offset = 0
-    let (word2, sel) = packageDataIntoWord word1 bytesInWord offset
-    writeRaw (wordAlignedAddr + i) sel word2
+    let (word1, sel) = packageDataIntoWord word0 bytesInWord offset
+    writeRaw (wordAlignedAddr + i) sel word1
 
 writeLessThanWord ::
   forall a m.
-  (BitPackC a, Monad m, ?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) =>
+  (BitPackC a, Monad m, ?byteOrder :: ByteOrder) =>
   (ByteSizeC a <= 4) =>
   Address ->
   a ->
@@ -322,48 +322,32 @@ writeLessThanWord addr val = do
   let wordAlignedAddr = addr `div` 4
   case cancelMulDiv @(ByteSizeC a) @4 of
     Dict -> do
-      let (vecToTuple -> (MkSolo word0)) = packWordC @4 ?regByteOrder val
-      let word1 = shuffle word0
-      let (word2, sel) = packageDataIntoWord word1 size subWordAddr
-      writeRaw wordAlignedAddr sel word2
+      let (vecToTuple -> (MkSolo word0)) = packWordC @4 ?byteOrder val
+      let (word1, sel) = packageDataIntoWord word0 size subWordAddr
+      writeRaw wordAlignedAddr sel word1
 
--- | Takes word in regByteOrder and outputs word in regByteOrder
-extractDataFromWord :: (?regByteOrder :: ByteOrder) => BitVector 32 -> Integer -> Integer -> BitVector 32
-extractDataFromWord word size offset
-  | BigEndian <- ?regByteOrder =
+-- | Takes word in native order (BE) and outputs word in native order
+extractDataFromWord :: BitVector 32 -> Integer -> Integer -> BitVector 32
+extractDataFromWord word size offset =
     case (size, offset, unpack word :: Vec 4 (BitVector 8)) of
-      (1, 0, _ :> _ :> _ :> a :> Nil) -> pack $ a :> 0 :> 0 :> 0 :> Nil
-      (1, 1, _ :> _ :> a :> _ :> Nil) -> pack $ a :> 0 :> 0 :> 0 :> Nil
-      (1, 2, _ :> a :> _ :> _ :> Nil) -> pack $ a :> 0 :> 0 :> 0 :> Nil
-      (1, 3, a :> _ :> _ :> _ :> Nil) -> pack $ a :> 0 :> 0 :> 0 :> Nil
-      (2, 0, _ :> _ :> a :> b :> Nil) -> pack $ b :> a :> 0 :> 0 :> Nil
-      (2, 1, _ :> a :> b :> _ :> Nil) -> pack $ b :> a :> 0 :> 0 :> Nil
-      (2, 2, a :> b :> _ :> _ :> Nil) -> pack $ b :> a :> 0 :> 0 :> Nil
-      (3, 0, _ :> a :> b :> c :> Nil) -> pack $ c :> b :> a :> 0 :> Nil
-      (3, 1, a :> b :> c :> _ :> Nil) -> pack $ c :> b :> a :> 0 :> Nil
+      (1, 0, _ :> _ :> _ :> a :> Nil) -> pack $ 0 :> 0 :> 0 :> a :> Nil
+      (1, 1, _ :> _ :> a :> _ :> Nil) -> pack $ 0 :> 0 :> 0 :> a :> Nil
+      (1, 2, _ :> a :> _ :> _ :> Nil) -> pack $ 0 :> 0 :> 0 :> a :> Nil
+      (1, 3, a :> _ :> _ :> _ :> Nil) -> pack $ 0 :> 0 :> 0 :> a :> Nil
+      (2, 0, _ :> _ :> a :> b :> Nil) -> pack $ 0 :> 0 :> a :> b :> Nil
+      (2, 1, _ :> a :> b :> _ :> Nil) -> pack $ 0 :> 0 :> a :> b :> Nil
+      (2, 2, a :> b :> _ :> _ :> Nil) -> pack $ 0 :> 0 :> a :> b :> Nil
+      (3, 0, _ :> a :> b :> c :> Nil) -> pack $ 0 :> a :> b :> c :> Nil
+      (3, 1, a :> b :> c :> _ :> Nil) -> pack $ 0 :> a :> b :> c :> Nil
       _ -> word
-  | otherwise = -- LittleEndian
-    case (size, offset, unpack word :: Vec 4 (BitVector 8)) of
-      (1, 0, _ :> _ :> _ :> a :> Nil) -> pack $ a :> 0 :> 0 :> 0 :> Nil
-      (1, 1, _ :> _ :> a :> _ :> Nil) -> pack $ a :> 0 :> 0 :> 0 :> Nil
-      (1, 2, _ :> a :> _ :> _ :> Nil) -> pack $ a :> 0 :> 0 :> 0 :> Nil
-      (1, 3, a :> _ :> _ :> _ :> Nil) -> pack $ a :> 0 :> 0 :> 0 :> Nil
-      (2, 0, _ :> _ :> b :> a :> Nil) -> pack $ a :> b :> 0 :> 0 :> Nil
-      (2, 1, _ :> b :> a :> _ :> Nil) -> pack $ a :> b :> 0 :> 0 :> Nil
-      (2, 2, b :> a :> _ :> _ :> Nil) -> pack $ a :> b :> 0 :> 0 :> Nil
-      (3, 0, _ :> c :> b :> a :> Nil) -> pack $ a :> b :> c :> 0 :> Nil
-      (3, 1, c :> b :> a :> _ :> Nil) -> pack $ a :> b :> c :> 0 :> Nil
-      (_, _, unpackedWord) -> pack $ reverse unpackedWord
 
-{-| Incoming word is regByteOrder, outputs in regByteOrder -}
+{-| Incoming word is native (big endian) byte order, outputs in native byte order -}
 packageDataIntoWord ::
-  (?regByteOrder :: ByteOrder) =>
   BitVector 32 ->
   Integer ->
   Integer ->
   (BitVector 32, BitVector 4)
-packageDataIntoWord word size offset
-  | BigEndian <- ?regByteOrder =
+packageDataIntoWord word size offset =
     case (size, offset, unpack word :: Vec 4 (BitVector 8)) of
       (1, 0, _ :> _ :> _ :> a :> Nil) -> (pack $ 0 :> 0 :> 0 :> a :> Nil, 0b0001)
       (1, 1, _ :> _ :> _ :> a :> Nil) -> (pack $ 0 :> 0 :> a :> 0 :> Nil, 0b0010)
@@ -375,23 +359,7 @@ packageDataIntoWord word size offset
       (3, 0, _ :> a :> b :> c :> Nil) -> (pack $ 0 :> a :> b :> c :> Nil, 0b0111)
       (3, 1, _ :> a :> b :> c :> Nil) -> (pack $ a :> b :> c :> 0 :> Nil, 0b1110)
       _ -> (word, 0b1111)
-  | otherwise = -- LittleEndian
-    case (size, offset, unpack word :: Vec 4 (BitVector 8)) of
-      (1, 0, _ :> _ :> _ :> a :> Nil) -> (pack $ 0 :> 0 :> 0 :> a :> Nil, 0b0001)
-      (1, 1, _ :> _ :> _ :> a :> Nil) -> (pack $ 0 :> 0 :> a :> 0 :> Nil, 0b0010)
-      (1, 2, _ :> _ :> _ :> a :> Nil) -> (pack $ 0 :> a :> 0 :> 0 :> Nil, 0b0100)
-      (1, 3, _ :> _ :> _ :> a :> Nil) -> (pack $ a :> 0 :> 0 :> 0 :> Nil, 0b1000)
-      (2, 0, _ :> _ :> a :> b :> Nil) -> (pack $ 0 :> 0 :> a :> b :> Nil, 0b0011)
-      (2, 1, _ :> _ :> a :> b :> Nil) -> (pack $ 0 :> a :> b :> 0 :> Nil, 0b0110)
-      (2, 2, _ :> _ :> a :> b :> Nil) -> (pack $ a :> b :> 0 :> 0 :> Nil, 0b1100)
-      (3, 0, _ :> a :> b :> c :> Nil) -> (pack $ 0 :> a :> b :> c :> Nil, 0b0111)
-      (3, 1, _ :> a :> b :> c :> Nil) -> (pack $ a :> b :> c :> 0 :> Nil, 0b1110)
-      (_, _, unpackedWord) -> (pack unpackedWord, 0b1111)
 
-shuffle :: (?regByteOrder :: ByteOrder, ?busByteOrder :: ByteOrder) => BitVector 32 -> BitVector 32
-shuffle bv
-  | ?regByteOrder /= ?busByteOrder = pack $ reverse (unpack bv :: Vec 4 (BitVector 8))
-  | otherwise = bv
 
 cancelMulDiv :: forall a b. (1 <= b, a <= b) => Dict (DivRU a b ~ 1)
 cancelMulDiv = unsafeCoerce (Dict :: Dict (0 ~ 0))

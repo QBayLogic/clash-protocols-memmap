@@ -21,6 +21,14 @@ import Clash.Prelude
 
 import GHC.Stack (HasCallStack, callStack, getCallStack)
 import Protocols (Circuit (..))
+import Protocols.Experimental.Wishbone (
+  Wishbone,
+  WishboneM2S (..),
+  WishboneMode (Standard),
+  WishboneS2M (..),
+  emptyWishboneM2S,
+  emptyWishboneS2M,
+ )
 import Protocols.MemoryMap (
   Address,
   MemoryMap (..),
@@ -29,15 +37,6 @@ import Protocols.MemoryMap (
   ToConstBwd,
   mergeDeviceDefs,
  )
-import Protocols.Wishbone (
-  Wishbone,
-  WishboneM2S (..),
-  WishboneMode (Standard),
-  WishboneS2M (..),
-  emptyWishboneM2S,
-  emptyWishboneS2M,
- )
-
 
 interconnect ::
   forall dom addrWidth nBytes n.

@@ -11,3 +11,5 @@ members = [
     "rust/integration-tests/bindings-c",
     "rust/integration-tests/bindings-rust",
 ]
+
+lints = {}
