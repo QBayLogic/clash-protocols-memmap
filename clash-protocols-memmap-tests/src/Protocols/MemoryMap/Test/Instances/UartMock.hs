@@ -12,7 +12,7 @@ import Protocols (Circuit, ToConstBwd, toSignals)
 import Protocols.Experimental.Wishbone (Wishbone, WishboneMode(..), WishboneS2M, WishboneM2S)
 import Protocols.MemoryMap (Mm, withName, MemoryMap, getMMAny)
 import Protocols.MemoryMap.Registers.WishboneStandard (deviceWbI, deviceConfig, registerConfig, registerWbI_)
-import Clash.Class.BitPackC (ByteOrder (BigEndian, LittleEndian))
+import Clash.Class.BitPackC (ByteOrder (LittleEndian))
 import Protocols.MemoryMap.Test.Interconnect (interconnect)
 
 topEntity ::

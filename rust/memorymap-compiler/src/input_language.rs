@@ -160,6 +160,7 @@ pub enum BuiltinType {
     Signed,
     Unsigned,
     Index,
+    Mask,
 }
 
 impl TryFrom<Value> for BuiltinType {
@@ -179,6 +180,7 @@ impl TryFrom<Value> for BuiltinType {
             "signed" => Ok(BuiltinType::Signed),
             "unsigned" => Ok(BuiltinType::Unsigned),
             "index" => Ok(BuiltinType::Index),
+            "mask" => Ok(BuiltinType::Mask),
             s => Err(format!("Unsupported builin type: {s:}")),
         }
     }
@@ -496,9 +498,18 @@ pub fn parse(src: &str) -> Result<MemoryMapDesc, serde_json::Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
 
     use super::*;
+
+    #[test]
+    fn register_access() {
+        let src = "\"read_only\"";
+        let x: RegisterAccess = serde_json::from_str(src).unwrap();
+        assert_eq!(x, RegisterAccess::ReadOnly);
+    }
+
+    /*
+    use std::path::PathBuf;
 
     fn memmap_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -510,14 +521,6 @@ mod tests {
             .into()
     }
 
-    #[test]
-    fn register_access() {
-        let src = "\"read_only\"";
-        let x: RegisterAccess = serde_json::from_str(src).unwrap();
-        assert_eq!(x, RegisterAccess::ReadOnly);
-    }
-
-    /*
     #[test]
     fn test_deserialise_memmap() {
         let path = memmap_dir().join("UartMock.json");
