@@ -10,6 +10,8 @@ members = [
 
     "rust/integration-tests/bindings-c",
     "rust/integration-tests/bindings-rust",
+    "rust/clash-bindings",
+    "rust/clash-macros",
 ]
 
 lints = {}
