@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![recursion_limit = "146"]
+#![no_std]
 
 pub mod bitvector;
 pub mod index;

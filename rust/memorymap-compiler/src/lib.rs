@@ -12,8 +12,6 @@ pub mod deprecated;
 
 pub mod format;
 
-pub mod build_utils;
-
 use std::io::Write;
 
 use input_language::{MemoryMapTree, PathComp};
