@@ -33,6 +33,29 @@ pub trait UnsignedSizeCheck {
     const CORRECT_SIZE: u8;
     /// Generic parameter to the unsigned type exposed as a `u32`
     const BITS: u32;
+    /// Zero value
+    ///
+    /// ```
+    /// # use crate::clash_bindings::unsigned::{Unsigned, UnsignedSizeCheck};
+    /// assert_eq!(Unsigned::<96, u128>::ZERO.into_inner(), 0);
+    /// ```
+    const ZERO: Self;
+    /// One value
+    ///
+    /// ```
+    /// # use crate::clash_bindings::unsigned::{Unsigned, UnsignedSizeCheck};
+    /// assert_eq!(Unsigned::<31, u32>::ONE.into_inner(), 1);
+    /// ```
+    const ONE: Self;
+    /// Maximum value
+    ///
+    /// ```
+    /// # use crate::clash_bindings::unsigned::{Unsigned, UnsignedSizeCheck};
+    /// # // Sneak a sanity check into this doctest, make sure the max bound is in bounds
+    /// # assert!(Unsigned::<5, u8>::inner_bounds_check(Unsigned::<5, u8>::MAX.into_inner()));
+    /// assert_eq!(Unsigned::<5, u8>::MAX.into_inner(), 0x1f);
+    /// ```
+    const MAX: Self;
     /// This `const` should be instantiated in methods implemented on [`Unsigned<N, T>`], since it is
     /// how they are constrained to the correct size. If they're improperly sized, this `const` will
     /// fail to evaluate and produce a compile error.
@@ -93,7 +116,7 @@ pub trait UnsignedSizeCheck {
     /// This produces the error
     /// ```text
     /// error[E0080]: evaluation of `<Unsigned<15, u8> as UnsignedSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/unsigned.rs
+    ///    --> clash-bindings/unsigned.rs
     ///     |
     ///     | impl_usc!(u8, u16, u32, u64, u128);
     ///     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Specified bit size `15` is too large for backing type `u8`
@@ -101,7 +124,7 @@ pub trait UnsignedSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` which comes from the expansion of the macro `impl_usc` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/unsigned.rs
+    ///   --> clash-bindings/unsigned.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -122,7 +145,7 @@ pub trait UnsignedSizeCheck {
     /// This produces the error
     /// ```text
     /// error[E0080]: evaluation of `<Unsigned<15, u32> as UnsignedSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/unsigned.rs
+    ///    --> clash-bindings/unsigned.rs
     ///     |
     ///     | impl_usc!(u8, u16, u32, u64, u128);
     ///     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Type `u32` is not optimally sized for bound 15. Use type `u16` instead.
@@ -130,7 +153,7 @@ pub trait UnsignedSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` which comes from the expansion of the macro `impl_usc` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/unsigned.rs
+    ///   --> clash-bindings/unsigned.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -150,7 +173,7 @@ pub trait UnsignedSizeCheck {
     /// ```
     /// ```text
     /// error[E0080]: evaluation of `<Unsigned<0, u32> as UnsignedSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/unsigned.rs
+    ///    --> clash-bindings/unsigned.rs
     ///     |
     ///     | impl_usc!(u8, u16, u32, u64, u128);
     ///     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Cannot represent Unsigned<0, T>!
@@ -158,7 +181,7 @@ pub trait UnsignedSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` which comes from the expansion of the macro `impl_usc` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/unsigned.rs
+    ///   --> clash-bindings/unsigned.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -185,6 +208,9 @@ macro_rules! impl_usc {
                     }
                 };
                 const BITS: u32 = N as u32;
+                const ZERO: Self = Unsigned(0);
+                const ONE: Self = Unsigned(1);
+                const MAX: Self = Unsigned(const { !(!0 << N) });
                 const SIZE_CHECK: () = {
                     if N == 0 {
                         panic!("Cannot represent Unsigned<0, T>!");
@@ -218,7 +244,7 @@ macro_rules! impl_usc {
                     if const { Self::CORRECT_SIZE == N } {
                         true
                     } else {
-                        val < const { 1 << (N - 1) }
+                        val <= const { !(!0 << N) }
                     }
                 }
             }
@@ -562,6 +588,29 @@ subst_macros::repeat_parallel_subst! {
             #[inline]
             fn from_as(other: Unsigned<N, T>) -> INTO {
                 INTO::from_as(other.0)
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_inner_bounds_check() {
+        type UnsignedT = Unsigned<6, u8>;
+
+        // Ensure all valid patterns pass
+        for n in 0..2u8.pow(UnsignedT::BITS) {
+            if !UnsignedT::inner_bounds_check(n) {
+                panic!("Value {n} ({n:08b}) failed bounds check when it should have passed");
+            }
+        }
+        // Ensure all invalid patterns fail
+        for n in 2u8.pow(UnsignedT::BITS)..=u8::MAX {
+            if UnsignedT::inner_bounds_check(n) {
+                panic!("Value {n} ({n:08b}) passed bounds check when it should have failed");
             }
         }
     }

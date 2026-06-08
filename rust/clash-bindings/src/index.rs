@@ -84,7 +84,7 @@ pub trait IndexSizeCheck {
     /// This produces the error
     /// ```text
     /// error[E0080]: evaluation of `<Index<100000, u8> as IndexSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/index.rs
+    ///    --> clash-bindings/index.rs
     ///     |
     ///     | impl_isc!(u8, u16, u32, u64); // READ THE REST OF THE ERROR MESSAGE
     ///     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Max bound 100000 cannot fit in type `u8` (max value: 256)
@@ -92,7 +92,7 @@ pub trait IndexSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` which comes from the expansion of the macro `impl_isc` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/index.rs
+    ///   --> clash-bindings/index.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -113,7 +113,7 @@ pub trait IndexSizeCheck {
     /// This produces the error
     /// ```text
     /// error[E0080]: evaluation of `<Index<10, u128> as IndexSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/index.rs
+    ///    --> clash-bindings/index.rs
     ///     |
     ///     | /             const_panic::concat_panic!(
     ///     | |                 const_panic::fmt::FmtArg::DISPLAY;
@@ -127,7 +127,7 @@ pub trait IndexSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/index.rs
+    ///   --> clash-bindings/index.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -147,13 +147,13 @@ pub trait IndexSizeCheck {
     /// ```
     /// ```text
     /// error[E0080]: evaluation of `<Index<0, u128> as IndexSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/index.rs:230:13
+    ///    --> clash-bindings/index.rs:230:13
     ///     |
     ///     |             panic!("Cannot represent `Index<0, T>`!");
     ///     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Cannot represent `Index<0, T>`!
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/index.rs:143:17
+    ///   --> clash-bindings/index.rs:143:17
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -168,6 +168,10 @@ pub trait IndexSizeCheck {
     /// Perform a bounds check on an instance of an index. Returns `true` if within bounds, `false`
     /// if not.
     fn inner_bounds_check(val: Self::Inner) -> bool;
+    /// Zero value
+    const ZERO: Self;
+    /// One value
+    const ONE: Self;
     /// The maximum value allowed in the index type (`N - 1`)
     const MAX: Self::Inner;
     /// Index instance containing the maximum allowable value
@@ -238,6 +242,8 @@ macro_rules! impl_isc {
                         val < Self::N_AS_INNER
                     }
                 }
+                const ZERO: Self = Index(0);
+                const ONE: Self = Index(1);
                 const MAX: $t = (N - 1) as $t;
                 const IMAX: Self = Index(Self::MAX);
             }
@@ -279,6 +285,8 @@ impl<const N: u128> IndexSizeCheck for Index<N, u128> {
         let _: () = Self::SIZE_CHECK; // READ THE REST OF THE ERROR MESSAGE
         val < N
     }
+    const ZERO: Self = Index(0);
+    const ONE: Self = Index(1);
     const MAX: u128 = N - 1;
     const IMAX: Self = Index(Self::MAX);
 }
