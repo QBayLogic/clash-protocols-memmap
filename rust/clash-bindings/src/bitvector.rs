@@ -85,7 +85,7 @@ pub trait BitVectorSizeCheck {
     /// This produces the following error message:
     /// ```text
     /// error[E0080]: evaluation of `<BitVector<1, 10> as BitVectorSizeCheck>::SIZE_CHECK` failed
-    ///   --> manual_additions/bitvector.rs
+    ///   --> clash-bindings/bitvector.rs
     ///    |
     ///    | /             const_panic::concat_panic!(
     ///    | |                 const_panic::fmt::FmtArg::DISPLAY;
@@ -99,7 +99,7 @@ pub trait BitVectorSizeCheck {
     ///    = note: this error originates in the macro `const_panic::concat_panic` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/bitvector.rs
+    ///   --> clash-bindings/bitvector.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -120,7 +120,7 @@ pub trait BitVectorSizeCheck {
     /// This produces the following error message:
     /// ```text
     /// error[E0080]: evaluation of `<BitVector<16, 1> as BitVectorSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/bitvector.rs
+    ///    --> clash-bindings/bitvector.rs
     ///     |
     ///     | /             const_panic::concat_panic!(
     ///     | |                 const_panic::fmt::FmtArg::DISPLAY;
@@ -134,7 +134,7 @@ pub trait BitVectorSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/bitvector.rs
+    ///   --> clash-bindings/bitvector.rs
     ///  |
     ///  |         let _ = Self::SIZE_CHECK;
     ///  |                 ^^^^^^^^^^^^^^^^
@@ -155,13 +155,13 @@ pub trait BitVectorSizeCheck {
     /// Which produces the error message
     /// ```text
     /// error[E0080]: evaluation of `<BitVector<0, 0> as BitVectorSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/bitvector.rs
+    ///    --> clash-bindings/bitvector.rs
     ///     |
     ///     |             panic!("Cannot represent a `BitVector<0, 0>`!");
     ///     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Cannot represent a `BitVector<0, 0>`!
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/bitvector.rs
+    ///   --> clash-bindings/bitvector.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -169,6 +169,12 @@ pub trait BitVectorSizeCheck {
     /// error: aborting due to 1 previous error
     /// ```
     const SIZE_CHECK: ();
+    /// Generic parameter to the bitvector type exposed as a `u32`
+    const BITS: u32;
+    /// Value with all unset bits
+    const ZERO: Self;
+    /// Value with all set bits
+    const MAX: Self;
     /// Backing type of a bitvector on a trait level
     type Inner;
     /// Perform a bounds check on an instance of a bitvector. Returns `true` if within bounds,
@@ -195,6 +201,17 @@ impl<const M: usize, const N: usize> BitVectorSizeCheck for BitVector<M, N> {
             );
         }
     };
+    const BITS: u32 = N as u32;
+    const ZERO: Self = BitVector([0; N]);
+    const MAX: Self = BitVector(
+        const {
+            let mut bits = [!0; N];
+            if !M.is_multiple_of(8) {
+                bits[N - 1] &= !(!0 << (M % 8));
+            }
+            bits
+        },
+    );
     type Inner = [u8; N];
     #[inline]
     fn inner_bounds_check(val: &[u8; N]) -> bool {
@@ -709,6 +726,39 @@ where
 
 #[cfg(test)]
 mod test {
+    #[test]
+    fn bv_ensure_max_within_bounds() {
+        use super::*;
+
+        assert!(BitVector::<1, 1>::inner_bounds_check(
+            &BitVector::<1, 1>::MAX.into_inner()
+        ));
+        assert!(BitVector::<2, 1>::inner_bounds_check(
+            &BitVector::<2, 1>::MAX.into_inner()
+        ));
+        assert!(BitVector::<3, 1>::inner_bounds_check(
+            &BitVector::<3, 1>::MAX.into_inner()
+        ));
+        assert!(BitVector::<4, 1>::inner_bounds_check(
+            &BitVector::<4, 1>::MAX.into_inner()
+        ));
+        assert!(BitVector::<5, 1>::inner_bounds_check(
+            &BitVector::<5, 1>::MAX.into_inner()
+        ));
+        assert!(BitVector::<6, 1>::inner_bounds_check(
+            &BitVector::<6, 1>::MAX.into_inner()
+        ));
+        assert!(BitVector::<7, 1>::inner_bounds_check(
+            &BitVector::<7, 1>::MAX.into_inner()
+        ));
+        assert!(BitVector::<8, 1>::inner_bounds_check(
+            &BitVector::<8, 1>::MAX.into_inner()
+        ));
+        assert!(BitVector::<9, 2>::inner_bounds_check(
+            &BitVector::<9, 2>::MAX.into_inner()
+        ));
+    }
+
     #[test]
     fn bv_us_conv_prim() {
         // Check for n = 8

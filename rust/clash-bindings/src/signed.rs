@@ -21,6 +21,10 @@ use super::{FromAs, index::Index, unsigned::Unsigned};
 /// backed by the smallest signed integer of `N` bits or more. For example, a `Signed<7, _>` should
 /// be `Signed<7, i8>` and `Signed<65, _>` should be `Signed<65, i128>`.
 ///
+/// Additionally, it should be noted that all contained values are sign-extended to the size of the
+/// backing type. For instance in a `Signed<3, i8>` the value `1` is equivalent to `0b0000_0001` and
+/// the value `-2` is equivalent to `0b1111_1110`.
+///
 /// [bpc]: https://github.com/QBayLogic/clash-protocols-memmap/blob/main/clash-bitpackc/src/Clash/Class/BitPackC.hs#L39-L44
 /// [sgn]: https://hackage-content.haskell.org/package/clash-prelude-1.8.4/docs/Clash-Sized-Signed.html#t:Signed
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -31,6 +35,39 @@ pub struct Signed<const N: u8, T>(pub(crate) T);
 pub trait SignedSizeCheck {
     /// The correct size of the backing type in bits
     const CORRECT_SIZE: u8;
+    /// Generic parameter to the signed type exposed as a `u32`
+    const BITS: u32;
+    /// Zero value
+    const ZERO: Self;
+    /// One value
+    const ONE: Self;
+    /// Negative one value
+    ///
+    /// ```
+    /// # use crate::clash_bindings::signed::{Signed, SignedSizeCheck};
+    /// # // Sneak a sanity check into this doctest, make sure negative one is within bounds
+    /// # assert!(Signed::<5, i8>::inner_bounds_check(Signed::<5, i8>::NEG_ONE.into_inner()));
+    /// assert_eq!(Signed::<5, i8>::NEG_ONE.into_inner(), -1);
+    /// ```
+    const NEG_ONE: Self;
+    /// Minimum value
+    ///
+    /// ```
+    /// # use crate::clash_bindings::signed::{Signed, SignedSizeCheck};
+    /// # // Sneak a sanity check into this doctest, make sure minimum value is within bounds
+    /// # assert!(Signed::<5, i8>::inner_bounds_check(Signed::<5, i8>::MIN.into_inner()));
+    /// assert_eq!(Signed::<5, i8>::MIN.into_inner(), 0b1111_0000u8 as i8);
+    /// ```
+    const MIN: Self;
+    /// Maximum value
+    ///
+    /// ```
+    /// # use crate::clash_bindings::signed::{Signed, SignedSizeCheck};
+    /// # // Sneak a sanity check into this doctest, make sure maximum value is within bounds
+    /// # assert!(Signed::<5, i8>::inner_bounds_check(Signed::<5, i8>::MAX.into_inner()));
+    /// assert_eq!(Signed::<5, i8>::MAX.into_inner(), 0b0000_1111u8 as i8);
+    /// ```
+    const MAX: Self;
     /// This `const` should be instantiated in methods implemented on [`Signed<N, T>`], since it is
     /// how they are constrained to the correct size. If they're improperly sized, this `const` will
     /// fail to evaluate and produce a compile error.
@@ -91,7 +128,7 @@ pub trait SignedSizeCheck {
     /// This produces the error
     /// ```text
     /// error[E0080]: evaluation of `<Signed<15, i8> as SignedSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/signed.rs
+    ///    --> clash-bindings/signed.rs
     ///     |
     ///     | impl_usc!(i8, i16, i32, i64, i128);
     ///     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Specified bit size `15` is too large for backing type `i8`
@@ -99,7 +136,7 @@ pub trait SignedSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` which comes from the expansion of the macro `impl_usc` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/signed.rs
+    ///   --> clash-bindings/signed.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -120,7 +157,7 @@ pub trait SignedSizeCheck {
     /// This produces the error
     /// ```text
     /// error[E0080]: evaluation of `<Signed<15, i32> as SignedSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/signed.rs
+    ///    --> clash-bindings/signed.rs
     ///     |
     ///     | impl_usc!(i8, i16, i32, i64, i128);
     ///     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Type `i32` is not optimally sized for bound 15. Use type `i16` instead.
@@ -128,7 +165,7 @@ pub trait SignedSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` which comes from the expansion of the macro `impl_usc` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/signed.rs
+    ///   --> clash-bindings/signed.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -148,7 +185,7 @@ pub trait SignedSizeCheck {
     /// ```
     /// ```text
     /// error[E0080]: evaluation of `<Signed<0, i32> as SignedSizeCheck>::SIZE_CHECK` failed
-    ///    --> manual_additions/signed.rs
+    ///    --> clash-bindings/signed.rs
     ///     |
     ///     | impl_usc!(i8, i16, i32, i64, i128);
     ///     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation panicked: Cannot represent Signed<0, T>!
@@ -156,7 +193,7 @@ pub trait SignedSizeCheck {
     ///     = note: this error originates in the macro `const_panic::concat_panic` which comes from the expansion of the macro `impl_usc` (in Nightly builds, run with -Z macro-backtrace for more info)
     ///
     /// note: erroneous constant encountered
-    ///   --> manual_additions/signed.rs
+    ///   --> clash-bindings/signed.rs
     ///    |
     ///    |         let _ = Self::SIZE_CHECK;
     ///    |                 ^^^^^^^^^^^^^^^^
@@ -179,6 +216,12 @@ macro_rules! impl_snc {
                         _ => 8,
                     }
                 };
+                const BITS: u32 = N as u32;
+                const ZERO: Self = Signed(0);
+                const ONE: Self = Signed(1);
+                const NEG_ONE: Self = Signed(!0);
+                const MIN: Self = Signed(!0 << (N - 1));
+                const MAX: Self = Signed(!(!0 << (N - 1)));
                 const SIZE_CHECK: () = {
                     if N < 2 {
                         const_panic::concat_panic!(
@@ -215,13 +258,11 @@ macro_rules! impl_snc {
                     if const { Self::CORRECT_SIZE == N } {
                         true
                     } else if val.is_negative() {
-                        // val >= const { 1 << (N - 1) }
-                        val > const {
+                        val >= const {
                             let ut: $ut = !0;
-                            ut.unbounded_shl(N as u32) as $t
+                            ut.unbounded_shl(N as u32 - 1) as $t
                         }
                     } else {
-                        // val <= const { !(!0 << (N - 1)) }
                         val < const {
                             let t: $t = 1;
                             t.unbounded_shl(N as u32 - 1)
@@ -567,6 +608,46 @@ subst_macros::repeat_parallel_subst! {
             #[inline]
             fn from_as(other: Signed<N, T>) -> INTO {
                 INTO::from_as(other.0)
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_inner_bounds_check() {
+        const VALID_BIT_PATTERNS: [i8; 16] = [
+            0b0000_0111,
+            0b0000_0110,
+            0b0000_0101,
+            0b0000_0100,
+            0b0000_0011,
+            0b0000_0010,
+            0b0000_0001,
+            0b0000_0000,
+            0b1111_1111u8 as i8,
+            0b1111_1110u8 as i8,
+            0b1111_1101u8 as i8,
+            0b1111_1100u8 as i8,
+            0b1111_1011u8 as i8,
+            0b1111_1010u8 as i8,
+            0b1111_1001u8 as i8,
+            0b1111_1000u8 as i8,
+        ];
+        type SignedT = Signed<4, i8>;
+        // All valid bit patterns should pass
+        for pattern in VALID_BIT_PATTERNS {
+            if !SignedT::inner_bounds_check(pattern) {
+                panic!("Bit pattern 0b{pattern:08b} failed to pass when it should have");
+            }
+        }
+        // Check all other `i8`s not in this list and ensure none of them pass
+        for pattern in (i8::MIN..=i8::MAX).filter(|pat| !VALID_BIT_PATTERNS.contains(pat)) {
+            if SignedT::inner_bounds_check(pattern) {
+                panic!("Bit pattern 0b{pattern:08b} passed when it should not have");
             }
         }
     }
