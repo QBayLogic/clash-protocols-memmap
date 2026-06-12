@@ -19,7 +19,7 @@ jobs:
 
         steps:
             - name: Checkout
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
 
             - name: Install Nix
               uses: cachix/install-nix-action@v31
@@ -36,12 +36,16 @@ jobs:
                   nix develop --command cabal freeze
 
             - name: Cache
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
+                  # First path for older Cabals, last three for newer ones
                   path: |
-                      ~/.cabal-nix/store
-                  key: packages-cachebust-0-nix-${{ hashFiles('cabal.project.freeze', 'cabal.project', 'flake.nix', 'flake.lock', 'nix/**/*.nix', 'nix/**/*.json') }}
-                  restore-keys: packages-cachebust-0-nix
+                      ~/.cabal
+                      ~/.config/cabal
+                      ~/.local/state/cabal
+                      ~/.cache/cabal
+                  key: packages-cachebust-1-nix-${{ hashFiles('cabal.project.freeze', 'cabal.project', 'flake.nix', 'flake.lock', 'nix/**/*.nix', 'nix/**/*.json') }}
+                  restore-keys: packages-cachebust-1-nix
 
             - run: nix develop --command cabal build all
             - run: nix develop --command cabal run clash-bitpackc:unittests
@@ -58,7 +62,7 @@ jobs:
 
         steps:
             - name: Checkout
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
 
             - name: Install Nix
               uses: cachix/install-nix-action@v31
@@ -70,12 +74,16 @@ jobs:
                   nix develop --command echo 'Nix shell entered'
 
             - name: Cache
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
+                  # First path for older Cabals, last three for newer ones
                   path: |
-                      ~/.cabal-nix/store
-                  key: packages-cachebust-0-nix-${{ hashFiles('cabal.project.freeze', 'cabal.project', 'flake.nix', 'flake.lock', 'nix/**/*.nix', 'nix/**/*.json') }}
-                  restore-keys: packages-cachebust-0-nix
+                      ~/.cabal
+                      ~/.config/cabal
+                      ~/.local/state/cabal
+                      ~/.cache/cabal
+                  key: packages-cachebust-1-nix-${{ hashFiles('cabal.project.freeze', 'cabal.project', 'flake.nix', 'flake.lock', 'nix/**/*.nix', 'nix/**/*.json') }}
+                  restore-keys: packages-cachebust-1-nix
 
             - run: nix develop --command cargo build
             - run: nix develop --command cargo test
@@ -85,7 +93,7 @@ jobs:
         container:
             image: ubuntu:24.04
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
             - name: REUSE Compliance Check
               uses: fsfe/reuse-action@v6
 
@@ -96,7 +104,7 @@ jobs:
         runs-on: ubuntu-24.04
         steps:
             - name: Checkout
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
 
             - name: Check dependencies for failures
               run: |
