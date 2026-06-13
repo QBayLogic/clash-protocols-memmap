@@ -16,9 +16,10 @@ use memorymap_compiler::ir::monomorph::passes::OnlyNats;
 use memorymap_compiler::ir::monomorph::{MonomorphVariants, Monomorpher};
 use memorymap_compiler::ir::types::IrCtx;
 
+use memorymap_compiler_rust::device_desc::generate_device_desc;
 use memorymap_compiler_rust::{
-    self as backend_rust, IdentType, TypeReferences, generate_device_instances, generate_type_desc,
-    ident,
+    self as backend_rust, IdentType, device_instances::generate_device_instances, ident,
+    types::TypeReferences, types::generate_type_desc,
 };
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -188,7 +189,7 @@ fn main() {
                 continue;
             }
 
-            let (dev_name, code, refs) = backend_rust::generate_device_desc(&ctx, &varis, *dev);
+            let (dev_name, code, refs) = generate_device_desc(&ctx, &varis, *dev);
             let file_name = ident(IdentType::Module, dev_name);
             let file_path = shared_devices_path.join(format!("{}.rs", file_name));
             let mut file = File::create(&file_path).unwrap();
@@ -241,7 +242,7 @@ fn main() {
             {
                 continue;
             }
-            let (dev_name, code, refs) = backend_rust::generate_device_desc(&ctx, &varis, *dev);
+            let (dev_name, code, refs) = generate_device_desc(&ctx, &varis, *dev);
             let file_name = ident(IdentType::Module, dev_name);
             let file_path = hal_path.join("devices").join(format!("{}.rs", file_name));
 

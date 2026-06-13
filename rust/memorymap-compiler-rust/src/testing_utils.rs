@@ -6,7 +6,7 @@
 
 use proc_macro2::TokenStream;
 
-use crate::generate_device_desc;
+use crate::device_desc::generate_device_desc;
 use memorymap_compiler::input_language::MemoryMapDesc;
 use memorymap_compiler::ir::monomorph::MonomorphVariants;
 use memorymap_compiler::ir::types::IrCtx;
