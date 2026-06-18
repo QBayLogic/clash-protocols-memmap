@@ -151,23 +151,83 @@ where
     }
 }
 
-impl<const M: usize, const N: usize> From<BitVector<M, N>> for Mask<M, N>
+impl<const M: usize, const N: usize, const O: usize, const P: usize> From<BitVector<M, N>>
+    for Mask<O, P>
 where
     BitVector<M, N>: BitVectorSizeCheck<Inner = [u8; N]>,
+    BitVector<O, P>: BitVectorSizeCheck<Inner = [u8; P]>,
 {
     #[inline]
-    fn from(bv: BitVector<M, N>) -> Mask<M, N> {
-        Mask(bv)
+    fn from(bv: BitVector<M, N>) -> Mask<O, P> {
+        let _ = BitVector::<M, N>::SIZE_CHECK;
+        let _ = BitVector::<O, P>::SIZE_CHECK;
+        let _ = const {
+            if M > O {
+                const_panic::concat_panic!(
+                    const_panic::fmt::FmtArg::DISPLAY;
+                    "Cannot infallibly convert from a `BitVector<",
+                    M,
+                    ", ",
+                    N,
+                    ">` into a `Mask<",
+                    O,
+                    ", ",
+                    P,
+                    ">` because `",
+                    M,
+                    " > ",
+                    O,
+                    "`",
+                );
+            }
+        };
+        if const { N == P } {
+            Mask(BitVector(unsafe { core::mem::transmute_copy(&bv.0) }))
+        } else {
+            let mut mask = [0; P];
+            mask[0..N].copy_from_slice(&bv.0[..]);
+            Mask(BitVector(mask))
+        }
     }
 }
 
-impl<const M: usize, const N: usize> From<Mask<M, N>> for BitVector<M, N>
+impl<const M: usize, const N: usize, const O: usize, const P: usize> From<Mask<M, N>>
+    for BitVector<O, P>
 where
     BitVector<M, N>: BitVectorSizeCheck<Inner = [u8; N]>,
+    BitVector<O, P>: BitVectorSizeCheck<Inner = [u8; P]>,
 {
     #[inline]
-    fn from(m: Mask<M, N>) -> BitVector<M, N> {
-        m.0
+    fn from(mask: Mask<M, N>) -> BitVector<O, P> {
+        let _ = BitVector::<M, N>::SIZE_CHECK;
+        let _ = BitVector::<O, P>::SIZE_CHECK;
+        let _ = const {
+            if M > O {
+                const_panic::concat_panic!(
+                    const_panic::fmt::FmtArg::DISPLAY;
+                    "Cannot infallibly convert from a `Mask<",
+                    M,
+                    ", ",
+                    N,
+                    ">` into a `BitVector<",
+                    O,
+                    ", ",
+                    P,
+                    ">` because `",
+                    M,
+                    " > ",
+                    O,
+                    "`",
+                );
+            }
+        };
+        if const { N == P } {
+            BitVector(unsafe { core::mem::transmute_copy(&mask.0.0) })
+        } else {
+            let mut bv = [0; P];
+            bv[0..N].copy_from_slice(&mask.0.0[..]);
+            BitVector(bv)
+        }
     }
 }
 
