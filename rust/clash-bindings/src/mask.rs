@@ -371,4 +371,161 @@ mod test {
         let expected = clash_macros::bitvector!(0b1_0110_0011_0101, n = 13);
         assert_eq!(bv, expected);
     }
+
+    #[test]
+    fn from_into_sanity() {
+        use rand::{RngExt, SeedableRng, rngs::SmallRng};
+
+        fn panic_helper<const A: usize, const B: usize, const C: usize, const D: usize>(
+            lhs: &'static str,
+            rhs: &'static str,
+            expect: bool,
+            actual: bool,
+            idx: usize,
+        ) {
+            const_panic::concat_panic!(
+                const_panic::fmt::FmtArg::DISPLAY;
+                lhs, "<", C, ", ", D, ">",
+                " from ",
+                rhs, "<", A, ", ", B, ">",
+                " failed at bit ",
+                idx,
+                ". Expected ",
+                expect as u8,
+                ", got ",
+                actual as u8,
+                ".",
+            )
+        }
+
+        fn run_sanity_check<const A: usize, const B: usize, const C: usize, const D: usize>(
+            rng: &mut SmallRng,
+        ) {
+            let mut small_arr = rng.random::<[u8; B]>();
+            if !A.is_multiple_of(8) {
+                small_arr[const { B - 1 }] &= const { !(!0 << (A % 8)) };
+            }
+
+            // Set up test values
+            let mask_small: Mask<A, B> = Mask(BitVector(small_arr));
+            let bv_small: BitVector<A, B> = BitVector(small_arr);
+
+            // Extend
+            let mask_from_bv_small: Mask<C, D> = bv_small.into();
+            let bv_from_mask_small: BitVector<C, D> = mask_small.into();
+
+            // Check that extension preserves lower bits (whole bytes)
+            for byte in 0..const { B - 1 } {
+                let byte_ext = byte * 8;
+                for bit in 0..8 {
+                    let idx = byte_ext + bit;
+
+                    // Fetch bv bits
+                    let bvs_bit = (bv_small.0[byte] >> bit) & 1 != 0;
+                    let bvfms_bit = (bv_from_mask_small.0[byte] >> bit) & 1 != 0;
+
+                    // Fetch mask bits
+                    let ms_bit = mask_small.get(idx).unwrap_or_else(|| {
+                        const_panic::concat_panic!(
+                            const_panic::fmt::FmtArg::DISPLAY;
+                            "Failed to fetch index ", idx, " from Mask<", A, ", ", B, ">",
+                        )
+                    });
+                    let mfbvs_bit = mask_from_bv_small.get(idx).unwrap_or_else(|| {
+                        const_panic::concat_panic!(
+                            const_panic::fmt::FmtArg::DISPLAY;
+                            "Failed to fetch index ", idx, " from Mask<", C, ", ", D, ">",
+                        )
+                    });
+
+                    // Compare
+                    if mfbvs_bit != ms_bit {
+                        panic_helper::<A, B, C, D>("Mask", "BitVector", ms_bit, mfbvs_bit, idx);
+                    }
+                    if bvfms_bit != bvs_bit {
+                        panic_helper::<A, B, C, D>("BitVector", "Mask", bvs_bit, bvfms_bit, idx);
+                    }
+                }
+            }
+            // Check that extension preserves lower bits (last byte, may be incomplete)
+            for bit in 0..const { A % 8 } {
+                let idx = const { B * 8 - 8 } + bit;
+
+                // Fetch bv bits
+                let bvs_bit = (bv_small.0[const { B - 1 }] >> bit) & 1 != 0;
+                let bvfms_bit = (bv_from_mask_small.0[const { B - 1 }] >> bit) & 1 != 0;
+
+                // Fetch mask bits
+                let ms_bit = mask_small.get(idx).unwrap_or_else(|| {
+                    const_panic::concat_panic!(
+                        const_panic::fmt::FmtArg::DISPLAY;
+                        "Failed to fetch index ", idx, " from Mask<", A, ", ", B, ">",
+                    )
+                });
+                let mfbvs_bit = mask_from_bv_small.get(idx).unwrap_or_else(|| {
+                    const_panic::concat_panic!(
+                        const_panic::fmt::FmtArg::DISPLAY;
+                        "Failed to fetch index ", idx, " from Mask<", C, ", ", D, ">",
+                    )
+                });
+
+                // Compare
+                if mfbvs_bit != ms_bit {
+                    panic_helper::<A, B, C, D>("Mask", "BitVector", ms_bit, mfbvs_bit, idx);
+                }
+                if bvfms_bit != bvs_bit {
+                    panic_helper::<A, B, C, D>("BitVector", "Mask", bvs_bit, bvfms_bit, idx);
+                }
+            }
+
+            // Ensure extension is all zeros
+            for idx in A..C {
+                if let Some(true) = mask_from_bv_small.get(idx) {
+                    panic_helper::<A, B, C, D>("Mask", "BitVector", false, true, idx);
+                }
+                if (bv_from_mask_small[idx / 8] >> (idx % 8)) & 1 != 0 {
+                    panic_helper::<A, B, C, D>("BitVector", "Mask", false, true, idx);
+                }
+            }
+        }
+
+        let mut rng = rand::rngs::SmallRng::seed_from_u64(0x0DDB1A5E5BAD5EED);
+        subst_macros::repeat_parallel_subst! {
+            groups: [
+                // Exhaustively test smaller cases
+                [group [sub [SMALL] = [1]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [2]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [3]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [4]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [5]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [6]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [7]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [8]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [9]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [10]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [11]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [12]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [13]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [14]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [15]] [sub [LONG] = [16]]]
+                [group [sub [SMALL] = [16]] [sub [LONG] = [16]]]
+                // Test some larger cases
+                [group [sub [SMALL] = [16]] [sub [LONG] = [128]]]
+                [group [sub [SMALL] = [32]] [sub [LONG] = [128]]]
+                [group [sub [SMALL] = [64]] [sub [LONG] = [128]]]
+                [group [sub [SMALL] = [128]] [sub [LONG] = [128]]]
+            ],
+            callback: NONE,
+            in: {
+                {
+                    const SMALL_BITS: usize = SMALL;
+                    const LONG_BITS: usize = LONG;
+                    const SMALL_BYTES: usize = SMALL_BITS.div_ceil(8);
+                    const LONG_BYTES: usize = LONG_BITS.div_ceil(8);
+
+                    run_sanity_check::<SMALL_BITS, SMALL_BYTES, LONG_BITS, LONG_BYTES>(&mut rng);
+                }
+            }
+        }
+    }
 }
