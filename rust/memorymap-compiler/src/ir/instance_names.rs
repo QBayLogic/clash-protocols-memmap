@@ -64,7 +64,7 @@ pub fn calculate_instance_names_in_hal(
     let mut name_counts = BTreeMap::<&str, usize>::new();
     let mut mapping = BTreeMap::<Handle<TreeElem>, _>::new();
 
-    for elem_handle in tree_elems.handles().rev() {
+    for elem_handle in tree_elems.handles() {
         let device_name_handle = match &ctx.tree_elem_types[elem_handle.cast()] {
             TreeElemType::DeviceInstance { device_name } => *device_name,
             TreeElemType::Interconnect { .. } => continue,
@@ -106,7 +106,7 @@ pub fn calculate_instance_names_in_hal(
         }
     }
 
-    for elem_handle in tree_elems.handles().rev() {
+    for elem_handle in tree_elems.handles() {
         let Some(instance_name) = names.names.get_mut(&elem_handle) else {
             continue;
         };
