@@ -55,18 +55,25 @@ $(do
             \((_name, mm), normalised) ->
               runMakeAbsolute mm.deviceDefs (0x0000_0000, 0xFFFF_FFFF) normalised
 
-    forM_ (memoryMaps `zip` absResults) $ \((mmName, mm), (absTree, errors)) -> do
-      if not $ null errors
-        then do
-          -- report errors
-          forM_ errors $ \err -> do
-            reportError (getErrorMessage err)
-        else do
-          -- output JSON
+    let regResults =
+          flip map memoryMaps $ \(_, mm) -> checkRegisters mm
 
+    forM_ (memoryMaps `zip` absResults `zip` regResults) $ \(((mmName, mm), (absTree, absErrors)), regErrs) -> do
+      case (absErrors, regErrs) of
+
+        ([], []) -> do
+          -- no errors, everything is cool, output JSON
           let json = Json.memoryMapJson Json.LocationSeparate mm.deviceDefs absTree
           let jsonPath = memMapDir </> mmName <.> "json"
           runIO $ BS.writeFile jsonPath $ Json.encode json
+
+        (_, _) -> do
+          when (not $ null regErrs) $ do
+            forM_ regErrs $ \err -> do
+              reportError (getRegErrorMessage err)
+          when (not $ null absErrors) $ do
+            forM_ absErrors $ \err -> do
+              reportError (getAddrErrorMessage err)
 
     pure []
  )
