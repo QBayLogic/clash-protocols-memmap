@@ -50,6 +50,7 @@ module Protocols.MemoryMap (
   NamedLoc (..),
   regType,
   regFieldType,
+  regByteAlignment,
   regByteSizeC,
   Register (..),
   RegisterType (..),
@@ -175,6 +176,12 @@ regByteSizeC (RegisterType proxy) = inner proxy
  where
   inner :: forall x a. (BitPackC x, Num a) => Proxy x -> a
   inner Proxy = natToNum @(ByteSizeC x)
+
+regByteAlignment :: (Num a) => RegisterType -> a
+regByteAlignment (RegisterType proxy) = inner proxy
+ where
+  inner :: forall x a. (BitPackC x, Num a) => Proxy x -> a
+  inner Proxy = natToNum @(AlignmentBoundaryC x)
 
 regType :: forall a. (WithTypeDescription a, BitPackC a) => RegisterType
 regType = RegisterType (Proxy @a)

@@ -149,6 +149,7 @@ library
     Protocols.MemoryMap.Check
     Protocols.MemoryMap.Check.AbsAddress
     Protocols.MemoryMap.Check.Normalized
+    Protocols.MemoryMap.Check.RegisterOverlap
     Protocols.MemoryMap.Json
     Protocols.MemoryMap.Mask
     Protocols.MemoryMap.Registers.WishboneStandard
@@ -204,6 +205,7 @@ test-suite unittests
 
   other-modules:
     Tests.Protocols.MemoryMap.Mask
+    Tests.Protocols.MemoryMap.RegisterOverlap
     Tests.Protocols.MemoryMap.Registers.WishboneStandard
 
   build-depends:

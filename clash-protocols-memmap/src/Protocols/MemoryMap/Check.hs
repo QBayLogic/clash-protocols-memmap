@@ -2,22 +2,28 @@
 --
 -- SPDX-License-Identifier: Apache-2.0
 
+{-# LANGUAGE RecordWildCards #-}
+
 -- | Validity checks performed on memory maps
 module Protocols.MemoryMap.Check (
   module Protocols.MemoryMap.Check.AbsAddress,
   module Protocols.MemoryMap.Check.Normalized,
-  getErrorMessage,
+  module Protocols.MemoryMap.Check.RegisterOverlap,
+  getAddrErrorMessage,
+  getRegErrorMessage,
 ) where
 
-import Clash.Prelude
+import Prelude
 
 import GHC.Stack (SrcLoc (..))
+import Protocols.MemoryMap
 import Protocols.MemoryMap.Check.AbsAddress
 import Protocols.MemoryMap.Check.Normalized
+import Protocols.MemoryMap.Check.RegisterOverlap
 import Text.Printf (printf)
 
-getErrorMessage :: AddressError -> String
-getErrorMessage err =
+getAddrErrorMessage :: AddressError -> String
+getAddrErrorMessage err =
   case err of
     SizeExceedsError
       { startAddr
@@ -45,5 +51,30 @@ getErrorMessage err =
           expected
           actual
           (shortLocation location)
- where
-  shortLocation s@SrcLoc{} = s.srcLocFile <> ":" <> show s.srcLocStartLine <> ":" <> show s.srcLocStartCol
+
+getRegErrorMessage :: RegisterCheckError -> String
+getRegErrorMessage err =
+  case err of
+    RegisterIsUnaligned{..} ->
+      printf
+        "In device %s the register %s is not aligned properly. Alignment requirement by type = %d, Address %08X (%s)"
+        device
+        register.name
+        alignment
+        address
+        (shortLocation loc)
+
+    RegisterOverlapsWithAnother{..} ->
+      printf
+        "In device %s the register %s (address %08X, size = %d) (%s) overlaps with register %s (address %08X) (%s)"
+        device
+        overlapsRegister.name
+        overlapsAddress
+        overlapsSize
+        (shortLocation overlapsLoc)
+        nextRegister.name
+        nextAddress
+        (shortLocation nextLoc)
+
+shortLocation :: SrcLoc -> String
+shortLocation s@SrcLoc{} = s.srcLocFile <> ":" <> show s.srcLocStartLine <> ":" <> show s.srcLocStartCol
