@@ -446,7 +446,8 @@ addressableBytesWb regConfig = case divWithRemainder @wordSize @8 @7 of
   go ((offset, _config, _, wbM2S0), respData) = (((), (), meta, wbS2M), req)
    where
     (wbS2M, req) = unbundle $ wishboneToRequestResponse regConfig.access <$> wbM2S1 <*> respData
-    wbM2S1 = fmap (\wb -> wb{addr = wb.addr - offset}) wbM2S0
+    -- See the note on forcing 'addr' in 'registerWbDf'.
+    wbM2S1 = fmap (\wb -> let a = wb.addr - offset in a `seqX` wb{addr = a}) wbM2S0
 
 {- | Stateless Wishbone interface that converts Wishbone transactions into ReqResp read/write
 operations, access control. This component assumes that the given address is already checked
@@ -481,13 +482,19 @@ wishboneToRequestResponse access wbM2S respData
  where
   addrMaxInteger = toInteger (maxBound :: BitVector aw)
   indexMaxInteger = toInteger (maxBound :: Index nWords)
-  -- Wishbone
+  -- Wishbone. All fields are forced when the record is constructed: left
+  -- lazy, they hold on to 'fault' / 'readFault' / 'writeFault' thunks and
+  -- the response data, which in turn keep the incoming 'WishboneM2S' and the
+  -- request/response signals of previous cycles alive.
   wbS2M =
-    (emptyWishboneS2M @0)
-      { acknowledge = masterActive && not fault && isJust respData
-      , err = masterActive && fault
-      , readData = fromJustX respData
-      }
+    acknowledge
+      `seqX` err
+      `seqX` readData
+      `seqX` (emptyWishboneS2M @0){acknowledge, err, readData}
+   where
+    acknowledge = masterActive && not fault && isJust respData
+    err = masterActive && fault
+    readData = fromJustX respData
 
   masterActive = wbM2S.busCycle && wbM2S.strobe
   fault = readFault || writeFault
@@ -659,7 +666,10 @@ registerWbDf clk rst regConfig resetValue =
     -- once the user acknowledges the bus activity.
     busActivity = getBusActivity <$> wbS2M0 <*> aOut <*> aInFromBus0
     aInFromBus0 = fmap unpackC <$> packedInFromBus0
-    wbM2S1 = fmap (\wb -> wb{addr = pack $ goRelativeOffset wb.addr}) wbM2S0
+    -- The new 'addr' is forced when the updated record is constructed: left
+    -- lazy, it would keep the pre-update 'WishboneM2S' record alive. See
+    -- https://github.com/bittide/bittide-hardware/issues/784.
+    wbM2S1 = fmap (\wb -> let a = pack (goRelativeOffset wb.addr) in a `seqX` wb{addr = a}) wbM2S0
     (wbS2M0, requestS) =
       unbundle
         $ wishboneToRequestResponse @(SizeInWordsC wordSize a) regConfig.access
@@ -705,10 +715,13 @@ registerWbDf clk rst regConfig resetValue =
         PreferCircuit -> setReadData <$> wbS2M1 <*> aIn0 <*> requestS
         PreferRegister -> wbS2M1
 
+    -- The new 'readData' is forced at construction; see the note on field
+    -- strictness in 'wishboneToRequestResponse'.
     setReadData s2m ma req =
       case (ma, req) of
         (Just a, Just (Left relOffset)) ->
-          s2m{readData = packWordCI @wordSize a !! relOffset}
+          let rd = packWordCI @wordSize a !! relOffset
+           in rd `seqX` s2m{readData = rd}
         _ -> s2m
 
     goRelativeOffset :: BitVector aw -> Index (SizeInWordsC wordSize a)
