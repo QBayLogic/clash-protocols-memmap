@@ -219,7 +219,7 @@ test-suite unittests
     deepseq,
     directory,
     extra,
-    hedgehog >=1.0 && <1.5,
+    hedgehog >=1.0 && <1.6,
     lifted-async,
     pretty-show,
     string-interpolate,
