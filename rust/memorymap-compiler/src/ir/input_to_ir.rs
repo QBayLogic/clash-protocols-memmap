@@ -15,6 +15,22 @@ use crate::{
 };
 use std::collections::BTreeMap;
 
+/// Whether a module is the one GHC reports for the boxed tuple types. The
+/// module name depends on the GHC version: `GHC.Tuple.Prim` (9.6 and 9.8),
+/// `GHC.Tuple` (9.10 and 9.12) and `GHC.Internal.Tuple` (9.14 and later).
+pub fn is_tuple_module(module: &str) -> bool {
+    matches!(
+        module,
+        "GHC.Tuple" | "GHC.Tuple.Prim" | "GHC.Internal.Tuple"
+    )
+}
+
+/// Whether a module is the one GHC reports for its primitive types such as
+/// `Bool`: `GHC.Types` up to GHC 9.12, `GHC.Internal.Types` from 9.14 on.
+pub fn is_ghc_types_module(module: &str) -> bool {
+    matches!(module, "GHC.Types" | "GHC.Internal.Types")
+}
+
 /// Mapping from handles back to the structures in the input language.
 ///
 /// This can be useful when dealing with handles alone is inconvenient, like
@@ -145,7 +161,7 @@ impl IrCtx {
             input::TypeDefinition::Synonym(_) => {
                 self.type_aliases.insert(handle);
             }
-            _ if ty_desc.name.module == "GHC.Tuple" => {
+            _ if is_tuple_module(&ty_desc.name.module) => {
                 self.type_tuples.insert(handle);
             }
             _ => {}
@@ -352,9 +368,15 @@ impl IrCtx {
                         to_do_and_patch.push((handle, args));
                         handle
                     }
-                    ("Float", "GHC.Types") => self.type_refs.push(TypeRef::Float),
-                    ("Double", "GHC.Types") => self.type_refs.push(TypeRef::Double),
-                    ("Bool", "GHC.Types") => self.type_refs.push(TypeRef::Bool),
+                    ("Float", module) if is_ghc_types_module(module) => {
+                        self.type_refs.push(TypeRef::Float)
+                    }
+                    ("Double", module) if is_ghc_types_module(module) => {
+                        self.type_refs.push(TypeRef::Double)
+                    }
+                    ("Bool", module) if is_ghc_types_module(module) => {
+                        self.type_refs.push(TypeRef::Bool)
+                    }
                     ("Vec", "Clash.Sized.Vector") => {
                         let handle = self.type_refs.push(TypeRef::Vector(
                             Handle::const_handle(0),
@@ -364,10 +386,10 @@ impl IrCtx {
                         to_do_and_patch.push((handle, args));
                         handle
                     }
-                    ("Unit", "GHC.Tuple") => {
+                    ("Unit", module) if is_tuple_module(module) => {
                         self.type_refs.push(TypeRef::Tuple(HandleRange::empty()))
                     }
-                    (name, "GHC.Tuple") if name.starts_with("Tuple") => {
+                    (name, module) if is_tuple_module(module) && name.starts_with("Tuple") => {
                         let handle = self.type_refs.push(TypeRef::Tuple(HandleRange::empty()));
 
                         to_do_and_patch.push((handle, args));

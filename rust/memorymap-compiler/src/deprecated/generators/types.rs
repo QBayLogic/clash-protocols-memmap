@@ -4,6 +4,8 @@
 
 use std::collections::BTreeSet;
 
+use crate::ir::input_to_ir::{is_ghc_types_module, is_tuple_module};
+
 use crate::{
     deprecated::generators::{generate_tag_docs, ident, IdentType},
     deprecated::hal_set::TypeDefAnnotations,
@@ -94,14 +96,14 @@ impl TypeGenerator {
                     ("Index", "Clash.Sized.Internal.Index") => {
                         ParsedType::Index(Box::new(Self::parse_type_ref(&args[0])))
                     }
-                    ("Float", "GHC.Types") => ParsedType::Float,
-                    ("Double", "GHC.Types") => ParsedType::Double,
-                    ("Bool", "GHC.Types") => ParsedType::Bool,
+                    ("Float", module) if is_ghc_types_module(module) => ParsedType::Float,
+                    ("Double", module) if is_ghc_types_module(module) => ParsedType::Double,
+                    ("Bool", module) if is_ghc_types_module(module) => ParsedType::Bool,
                     ("Vec", "Clash.Sized.Vector") => ParsedType::Vector(
                         Box::new(Self::parse_type_ref(&args[0])),
                         Box::new(Self::parse_type_ref(&args[1])),
                     ),
-                    ("Unit", "GHC.Tuple") => ParsedType::Tuple(vec![]),
+                    ("Unit", module) if is_tuple_module(module) => ParsedType::Tuple(vec![]),
                     ("Either", "GHC.Internal.Data.Either") => ParsedType::Either(
                         Box::new(Self::parse_type_ref(&args[0])),
                         Box::new(Self::parse_type_ref(&args[1])),
@@ -109,7 +111,7 @@ impl TypeGenerator {
                     ("Maybe", "GHC.Internal.Maybe") => {
                         ParsedType::Maybe(Box::new(Self::parse_type_ref(&args[0])))
                     }
-                    (name, "GHC.Tuple") if name.starts_with("Tuple") => {
+                    (name, module) if is_tuple_module(module) && name.starts_with("Tuple") => {
                         ParsedType::Tuple(args.into_iter().map(Self::parse_type_ref).collect())
                     }
                     (_, _) => ParsedType::Custom {
