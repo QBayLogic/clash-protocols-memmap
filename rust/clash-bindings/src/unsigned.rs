@@ -210,7 +210,7 @@ macro_rules! impl_usc {
                 const BITS: u32 = N as u32;
                 const ZERO: Self = Unsigned(0);
                 const ONE: Self = Unsigned(1);
-                const MAX: Self = Unsigned(const { !(!0 << N) });
+                const MAX: Self = Unsigned(const { !(<$t>::MAX.unbounded_shl(N as u32)) });
                 const SIZE_CHECK: () = {
                     if N == 0 {
                         panic!("Cannot represent Unsigned<0, T>!");
@@ -244,7 +244,7 @@ macro_rules! impl_usc {
                     if const { Self::CORRECT_SIZE == N } {
                         true
                     } else {
-                        val <= const { !(!0 << N) }
+                        val <= const { !(<$t>::MAX.unbounded_shl(N as u32)) }
                     }
                 }
             }
@@ -612,6 +612,36 @@ mod test {
             if UnsignedT::inner_bounds_check(n) {
                 panic!("Value {n} ({n:08b}) passed bounds check when it should have failed");
             }
+        }
+    }
+
+    #[test]
+    fn test_max_round_trip() {
+        subst_macros::repeat_parallel_subst! {
+            groups: [
+                [group [sub [NBITS] = [7]] [sub [BT] = [u8]]]
+                [group [sub [NBITS] = [8]] [sub [BT] = [u8]]]
+                [group [sub [NBITS] = [9]] [sub [BT] = [u16]]]
+                [group [sub [NBITS] = [16]] [sub [BT] = [u16]]]
+                [group [sub [NBITS] = [17]] [sub [BT] = [u32]]]
+                [group [sub [NBITS] = [32]] [sub [BT] = [u32]]]
+                [group [sub [NBITS] = [33]] [sub [BT] = [u64]]]
+                [group [sub [NBITS] = [64]] [sub [BT] = [u64]]]
+                [group [sub [NBITS] = [65]] [sub [BT] = [u128]]]
+                [group [sub [NBITS] = [128]] [sub [BT] = [u128]]]
+            ],
+            callback: NONE,
+            in: {{
+                const TESTVAL: BT = match (BT::MIN + 2).checked_pow(NBITS) {
+                    Some(val) => val - 1,
+                    None => BT::MAX,
+                };
+                assert_eq!(
+                    Some(TESTVAL),
+                    Unsigned::<NBITS, BT>::new(TESTVAL).map(Unsigned::into_inner)
+                );
+                assert_eq!(TESTVAL, Unsigned::<NBITS, BT>::MAX.into_inner());
+            }}
         }
     }
 }
