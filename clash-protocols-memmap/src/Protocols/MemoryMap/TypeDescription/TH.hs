@@ -108,7 +108,7 @@ data TypeRef
   | TupleType Integer [TypeRef]
   | Variable TH.Name
   | TypeNat Integer
-  deriving (Show, TH.Lift)
+  deriving (Show, Eq, TH.Lift)
 
 -- | Derive an instance of 'WithTypeDescription' for a type
 deriveTypeDescription :: TH.Name -> TH.Q [TH.Dec]

@@ -204,6 +204,7 @@ test-suite unittests
 
   other-modules:
     Tests.Protocols.MemoryMap.Mask
+    Tests.Protocols.MemoryMap.MergeDeviceDefs
     Tests.Protocols.MemoryMap.Registers.WishboneStandard
 
   build-depends:
