@@ -1,0 +1,108 @@
+{
+    "devices": {
+        "NamedType": {
+            "name": "NamedType",
+            "description": "",
+            "src_location": 0,
+            "tags": [],
+            "registers": [
+                {
+                    "name": "reading",
+                    "description": "",
+                    "access": "read_write",
+                    "address": 0,
+                    "size": 1,
+                    "reset": 0,
+                    "src_location": 0,
+                    "tags": [],
+                    "type": {
+                        "type_reference": {
+                            "name_base": "Reading",
+                            "name_module": "Example",
+                            "name_package": "example"
+                        },
+                        "args": [
+                            {
+                                "nat": 8
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    },
+    "src_locations": [
+        {
+            "file": "Example.hs",
+            "module": "Example",
+            "package": "example",
+            "start_line": 1,
+            "start_col": 1,
+            "end_line": 1,
+            "end_col": 1
+        }
+    ],
+    "tree": {
+        "device_instance": {
+            "absolute_address": 0,
+            "device_name": "NamedType",
+            "path": [
+                0
+            ],
+            "src_location": 0,
+            "tags": []
+        }
+    },
+    "types": {
+        "Clash.Sized.Internal.Unsigned.Unsigned": {
+            "name": {
+                "name_base": "Unsigned",
+                "name_module": "Clash.Sized.Internal.Unsigned",
+                "name_package": "clash-prelude"
+            },
+            "type_args": [
+                {
+                    "kind": "number",
+                    "name": "n"
+                }
+            ],
+            "definition": {
+                "builtin": "unsigned"
+            }
+        },
+        "Example.Reading": {
+            "name": {
+                "name_base": "Reading",
+                "name_module": "Example",
+                "name_package": "example"
+            },
+            "type_args": [
+                {
+                    "kind": "number",
+                    "name": "n"
+                }
+            ],
+            "definition": {
+                "datatype": [
+                    {
+                        "name": "Reading",
+                        "nameless": [
+                            {
+                                "type_reference": {
+                                    "name_base": "Unsigned",
+                                    "name_module": "Clash.Sized.Internal.Unsigned",
+                                    "name_package": "clash-prelude"
+                                },
+                                "args": [
+                                    {
+                                        "variable": "n"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

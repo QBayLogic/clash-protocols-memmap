@@ -18,10 +18,12 @@ use memorymap_compiler::ir::types::IrCtx;
 /// scripts), and generates the Rust code for each device. Unlike the build
 /// scripts in `bittide-hal`, it does *not* deduplicate types or devices across
 /// multiple HALs, which makes it convenient for tests that exercise a single
-/// memory map.
+/// memory map. It does resolve type references to their definitions, so
+/// registers with named (user-defined) types are supported.
 ///
 /// Returns the device name and generated code for each device.
 pub fn generate_device_descs(memmap: &MemoryMapDesc) -> Vec<(String, TokenStream)> {
+    use memorymap_compiler::ir::deduplicate::{deduplicate, deduplicate_type_names};
     use memorymap_compiler::ir::input_to_ir::IrInputMapping;
     use memorymap_compiler::ir::monomorph::Monomorpher;
     use memorymap_compiler::ir::monomorph::passes::OnlyNats;
@@ -29,6 +31,12 @@ pub fn generate_device_descs(memmap: &MemoryMapDesc) -> Vec<(String, TokenStream
     let mut ctx = IrCtx::new();
     let mut input_mapping = IrInputMapping::default();
     let hal = ctx.add_memory_map_desc(&mut input_mapping, memmap);
+
+    // Every type reference gets its own `TypeName` handle. Point them at the
+    // handle of their definition, or the monomorpher cannot find named types.
+    let (shared, _) = deduplicate(&ctx, &input_mapping, std::iter::once(&hal))
+        .expect("a single memory map cannot have conflicting types");
+    deduplicate_type_names(&mut ctx, &shared);
 
     let mut monomorpher = Monomorpher::new(&ctx, &input_mapping);
     let mut varis = MonomorphVariants::default();
