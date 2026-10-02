@@ -63,7 +63,7 @@ module Protocols.MemoryMap (
 ) where
 
 import Clash.Prelude (
-  Eq,
+  Eq ((==)),
   Integer,
   Maybe,
   NFDataX,
@@ -77,6 +77,7 @@ import Clash.Prelude (
   error,
   flip,
   natToNum,
+  otherwise,
   ($),
   (<>),
  )
@@ -293,8 +294,37 @@ withConstBwd val (Circuit f) = Circuit go
    where
     (bwdA, fwdB) = f (fwdA, bwdB)
 
-mergeDeviceDefs :: [Map.Map String DeviceDefinition] -> Map.Map String DeviceDefinition
-mergeDeviceDefs = L.foldl Map.union Map.empty
+{- | Merge the device definitions of several subordinates, for example the
+subordinates of an interconnect.
+
+Two definitions with the same name are merged only if they have the same
+register layout: the same register names, addresses, access and types. This is
+the case when one device is instantiated more than once. If the layouts are
+different, this function calls 'error', because one of the two layouts would
+otherwise be lost. Give each such device a unique name, for example by adding
+its type parameters to the name.
+-}
+mergeDeviceDefs ::
+  (HasCallStack) =>
+  [Map.Map String DeviceDefinition] ->
+  Map.Map String DeviceDefinition
+mergeDeviceDefs = L.foldl (Map.unionWithKey checkSameLayout) Map.empty
+ where
+  checkSameLayout name def0 def1
+    | layout def0 == layout def1 = def0
+    | otherwise =
+        error
+          $ L.unlines
+            [ "Two different devices have the name " <> show name <> "."
+            , "Give each device a unique name, for example by adding its type parameters to the name."
+            , "Registers of the first device:  " <> show (layout def0)
+            , "Registers of the second device: " <> show (layout def1)
+            ]
+
+  layout def' =
+    [ (reg.name.name, reg.value.address, reg.value.access, regFieldType reg.value.fieldType)
+    | reg <- def'.registers
+    ]
 
 getConstBwdAny ::
   (HasCallStack, NFDataX (Fwd a), NFDataX (Bwd b)) => Circuit (ToConstBwd v, a) b -> v
